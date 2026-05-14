@@ -71,6 +71,7 @@ class HScript extends Iris {
 	#end
 
 	public var origin:String;
+	public var blocked:Bool = false;
 
 	override public function new(?parent:Dynamic, ?file:String, ?varsToBring:Any = null, ?manualRun:Bool = false) {
 		if (file == null)
@@ -96,6 +97,7 @@ class HScript extends Iris {
 			customInterp.parentInstance = FlxG.state;
 			customInterp.showPosOnLog = false;
 			this.interp = customInterp;
+			this.blocked = true;
 			trace('HScript: blocked $file -- mod "${this.modFolder}" not trusted');
 			return;
 		}

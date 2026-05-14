@@ -3441,9 +3441,11 @@ class PlayState extends MusicBeatState {
 		var newScript:HScript = null;
 		try {
 			newScript = new HScript(null, file);
-			if (newScript.exists('onCreate'))
-				newScript.call('onCreate');
-			trace('initialized hscript interp successfully: $file');
+			if (!newScript.blocked) {
+				if (newScript.exists('onCreate'))
+					newScript.call('onCreate');
+				trace('initialized hscript interp successfully: $file');
+			}
 			hscriptArray.push(newScript);
 		} catch (e:IrisError) {
 			var pos:HScriptInfos = cast {fileName: file, showLine: false};

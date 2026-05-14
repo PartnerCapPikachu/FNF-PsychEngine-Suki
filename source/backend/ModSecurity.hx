@@ -72,6 +72,10 @@ class ModSecurity {
 
 	public static var records:Map<String, ModSecurityRecord> = new Map();
 	static var loaded:Bool = false;
+	// Per-session cache: once we've validated a mod's hash this run, don't
+	// re-hash on every subsequent script load (was killing perf -- HScript.new
+	// and FunkinLua.new both call isBlocked, often dozens of times per state).
+	static var checkedThisSession:Map<String, Bool> = new Map();
 
 	public static function load():Void {
 		if (loaded) return;
@@ -104,6 +108,7 @@ class ModSecurity {
 	/** Force a re-scan of every enabled mod (e.g. user pressed "rescan"). */
 	public static function clearAll():Void {
 		records = new Map();
+		checkedThisSession = new Map();
 		FlxG.save.data.modSecurity = null;
 		FlxG.save.flush();
 	}
@@ -111,6 +116,7 @@ class ModSecurity {
 	public static function clearMod(folder:String):Void {
 		load();
 		records.remove(folder);
+		checkedThisSession.remove(folder);
 		save();
 	}
 
@@ -123,6 +129,7 @@ class ModSecurity {
 		} else {
 			rec.allowed = allowed;
 		}
+		checkedThisSession.set(folder, true);
 		save();
 	}
 
@@ -135,6 +142,11 @@ class ModSecurity {
 		if (folder == null || folder.length == 0) return false; // not a mod
 		if (!ClientPrefs.data.modSecurityEnabled) return false;
 		load();
+		// Fast path: already validated this session, just answer from the record.
+		if (checkedThisSession.exists(folder)) {
+			final cached = records.get(folder);
+			return cached == null ? false : !cached.allowed;
+		}
 		var rec = records.get(folder);
 		var currentHash = computeHash(folder);
 		if (rec == null) {
@@ -142,6 +154,7 @@ class ModSecurity {
 			rec = {hash: currentHash, allowed: (findings.length == 0), findings: findings};
 			records.set(folder, rec);
 			save();
+			checkedThisSession.set(folder, true);
 			return !rec.allowed;
 		}
 		if (currentHash != rec.hash) {
@@ -154,6 +167,7 @@ class ModSecurity {
 			else rec.allowed = false;
 			save();
 		}
+		checkedThisSession.set(folder, true);
 		return !rec.allowed;
 	}
 
