@@ -15,13 +15,35 @@ import backend.ModSecurity;
  * via ModSecurity.setDecision() the moment the user confirms.
  */
 class ModSecuritySubstate extends MusicBeatSubstate {
+	// Patterns we still scan/track but don't surface in the prompt because
+	// they're so common that listing them just adds noise. The mod can still
+	// trip the prompt via *other* sensitive APIs; this only filters display.
+	static final HIDDEN_FROM_DISPLAY:Map<String, Bool> = [
+		"runHaxeCode" => true,
+		"runHaxeFunction" => true,
+		"addHaxeLibrary" => true,
+	];
+
+	// Panel layout (centered)
+	static inline final PANEL_W:Int = 900;
+	static inline final PANEL_H:Int = 560;
+	static inline final BORDER:Int = 3;
+
 	var pending:Array<String>;
 	var currentIdx:Int = 0;
 
 	var bg:FlxSprite;
+	var panelBorder:FlxSprite;
+	var panel:FlxSprite;
+	var headerBar:FlxSprite;
+
 	var titleTxt:FlxText;
+	var subTitleTxt:FlxText;
 	var bodyTxt:FlxText;
+	var examplesTxt:FlxText;
 	var hintTxt:FlxText;
+	var counterTxt:FlxText;
+
 	var trustTxt:Alphabet;
 	var blockTxt:Alphabet;
 	var onTrust:Bool = false;
@@ -34,37 +56,86 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 	override function create() {
 		super.create();
 
-		bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
-		bg.alpha = 0.88;
+		// Full-screen dimmer
+		bg = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
+		bg.scale.set(FlxG.width, FlxG.height);
+		bg.updateHitbox();
+		bg.alpha = 0.78;
 		bg.scrollFactor.set();
 		add(bg);
 
-		titleTxt = new FlxText(20, 20, FlxG.width - 40, "", 28);
-		titleTxt.setFormat(Paths.font("vcr.ttf"), 28, 0xFFFFD24A, LEFT, OUTLINE, FlxColor.BLACK);
-		titleTxt.borderSize = 2;
+		final px:Float = (FlxG.width - PANEL_W) * 0.5;
+		final py:Float = (FlxG.height - PANEL_H) * 0.5;
+
+		// Border (slightly larger than panel, drawn behind it)
+		panelBorder = new FlxSprite(px - BORDER, py - BORDER).makeGraphic(1, 1, 0xFFFFD24A);
+		panelBorder.scale.set(PANEL_W + BORDER * 2, PANEL_H + BORDER * 2);
+		panelBorder.updateHitbox();
+		panelBorder.scrollFactor.set();
+		add(panelBorder);
+
+		// Panel body
+		panel = new FlxSprite(px, py).makeGraphic(1, 1, 0xFF14161E);
+		panel.scale.set(PANEL_W, PANEL_H);
+		panel.updateHitbox();
+		panel.alpha = 0.96;
+		panel.scrollFactor.set();
+		add(panel);
+
+		// Header strip
+		headerBar = new FlxSprite(px, py).makeGraphic(1, 1, 0xFF1F2230);
+		headerBar.scale.set(PANEL_W, 70);
+		headerBar.updateHitbox();
+		headerBar.scrollFactor.set();
+		add(headerBar);
+
+		titleTxt = new FlxText(px + 18, py + 10, PANEL_W - 200, "Sensitive API Warning", 22);
+		titleTxt.setFormat(Paths.font("vcr.ttf"), 22, 0xFFFFD24A, LEFT, OUTLINE, FlxColor.BLACK);
+		titleTxt.borderSize = 1.5;
 		titleTxt.scrollFactor.set();
 		add(titleTxt);
 
-		bodyTxt = new FlxText(20, 90, FlxG.width - 40, "", 16);
-		bodyTxt.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
-		bodyTxt.borderSize = 1.5;
+		counterTxt = new FlxText(px, py + 18, PANEL_W - 18, "", 16);
+		counterTxt.setFormat(Paths.font("vcr.ttf"), 16, 0xFFB0B0B0, RIGHT, OUTLINE, FlxColor.BLACK);
+		counterTxt.borderSize = 1;
+		counterTxt.scrollFactor.set();
+		add(counterTxt);
+
+		subTitleTxt = new FlxText(px + 18, py + 38, PANEL_W - 36, "", 18);
+		subTitleTxt.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
+		subTitleTxt.borderSize = 1.25;
+		subTitleTxt.scrollFactor.set();
+		add(subTitleTxt);
+
+		bodyTxt = new FlxText(px + 18, py + 86, PANEL_W - 36, "", 15);
+		bodyTxt.setFormat(Paths.font("vcr.ttf"), 15, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
+		bodyTxt.borderSize = 1.25;
 		bodyTxt.scrollFactor.set();
 		add(bodyTxt);
 
-		hintTxt = new FlxText(0, FlxG.height - 110, FlxG.width, "", 16);
-		hintTxt.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
-		hintTxt.borderSize = 1.5;
-		hintTxt.scrollFactor.set();
-		hintTxt.text = "Left/Right to choose -- Enter to confirm";
-		add(hintTxt);
+		examplesTxt = new FlxText(px + 18, py + 240, PANEL_W - 36, "", 13);
+		examplesTxt.setFormat(Paths.font("vcr.ttf"), 13, 0xFFCCCCCC, LEFT, OUTLINE, FlxColor.BLACK);
+		examplesTxt.borderSize = 1;
+		examplesTxt.scrollFactor.set();
+		add(examplesTxt);
 
-		trustTxt = new Alphabet(0, FlxG.height - 70, "TRUST", true);
-		trustTxt.x = FlxG.width * 0.30 - trustTxt.width * 0.5;
+		// Choice buttons inside the panel
+		final btnY:Float = py + PANEL_H - 90;
+		trustTxt = new Alphabet(0, btnY, "TRUST", true);
+		trustTxt.x = px + PANEL_W * 0.30 - trustTxt.width * 0.5;
+		trustTxt.scrollFactor.set();
 		add(trustTxt);
 
-		blockTxt = new Alphabet(0, FlxG.height - 70, "BLOCK", true);
-		blockTxt.x = FlxG.width * 0.70 - blockTxt.width * 0.5;
+		blockTxt = new Alphabet(0, btnY, "BLOCK", true);
+		blockTxt.x = px + PANEL_W * 0.70 - blockTxt.width * 0.5;
+		blockTxt.scrollFactor.set();
 		add(blockTxt);
+
+		hintTxt = new FlxText(px, py + PANEL_H - 28, PANEL_W, "Left/Right to choose -- Enter to confirm", 14);
+		hintTxt.setFormat(Paths.font("vcr.ttf"), 14, 0xFFB0B0B0, CENTER, OUTLINE, FlxColor.BLACK);
+		hintTxt.borderSize = 1;
+		hintTxt.scrollFactor.set();
+		add(hintTxt);
 
 		showCurrent();
 		updateOptions();
@@ -77,12 +148,14 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 		}
 		final folder = pending[currentIdx];
 		final rec = ModSecurity.records.get(folder);
-		titleTxt.text = 'Mod "$folder" uses sensitive APIs';
 
-		final sb = new StringBuf();
-		sb.add('This mod\'s scripts can use APIs that are sometimes abused for harm.\n');
-		sb.add('Trusting will let its scripts run normally.\n');
-		sb.add('Blocking keeps the mod enabled but skips running its scripts.\n');
+		counterTxt.text = 'Mod ${currentIdx + 1} / ${pending.length}';
+		subTitleTxt.text = '"$folder"';
+
+		final body = new StringBuf();
+		body.add('This mod\'s scripts use APIs that can be abused for harm.\n');
+		body.add('  - TRUST: scripts run normally.\n');
+		body.add('  - BLOCK: mod stays enabled, but its scripts are skipped.\n');
 
 		if (rec != null) {
 			final seenHigh = new Map<String, Bool>();
@@ -93,6 +166,7 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 			final fLen = findings.length;
 			for (i in 0...fLen) {
 				final f = findings[i];
+				if (HIDDEN_FROM_DISPLAY.exists(f.pattern)) continue;
 				if (f.severity == 0) {
 					if (seenHigh.exists(f.pattern)) continue;
 					seenHigh.set(f.pattern, true);
@@ -104,38 +178,50 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 				}
 			}
 			if (highList.length > 0) {
-				sb.add('\n[HIGH] ');
-				sb.add(highList.join(', '));
+				body.add('\nHIGH risk:    ');
+				body.add(highList.join(', '));
 			}
 			if (medList.length > 0) {
-				sb.add('\n[MEDIUM] ');
-				sb.add(medList.join(', '));
+				body.add('\nMEDIUM risk:  ');
+				body.add(medList.join(', '));
 			}
+			if (highList.length == 0 && medList.length == 0)
+				body.add('\n(only common APIs found -- listed examples below)');
 
-			// Show up to 6 actual file:line examples so the user has something to look at.
-			sb.add('\n\nExamples:');
-			final shown:Int = fLen < 6 ? fLen : 6;
-			for (i in 0...shown) {
+			// Build examples from non-hidden findings only.
+			final exBuf = new StringBuf();
+			exBuf.add('Examples:');
+			var shown:Int = 0;
+			var skipped:Int = 0;
+			final maxShown:Int = 6;
+			for (i in 0...fLen) {
 				final f = findings[i];
-				sb.add('\n  ');
-				sb.add(f.file);
-				sb.add(':');
-				sb.add(Std.string(f.line));
-				sb.add('  ');
-				sb.add(f.pattern);
+				if (HIDDEN_FROM_DISPLAY.exists(f.pattern)) continue;
+				if (shown >= maxShown) {
+					skipped++;
+					continue;
+				}
+				exBuf.add('\n  ');
+				exBuf.add(f.file);
+				exBuf.add(':');
+				exBuf.add(Std.string(f.line));
+				exBuf.add('  ');
+				exBuf.add(f.pattern);
+				shown++;
 			}
-			if (fLen > shown) {
-				sb.add('\n  ... ');
-				sb.add(Std.string(fLen - shown));
-				sb.add(' more');
+			if (shown == 0)
+				exBuf.add('\n  (no displayable examples)');
+			else if (skipped > 0) {
+				exBuf.add('\n  ... ');
+				exBuf.add(Std.string(skipped));
+				exBuf.add(' more');
 			}
+			examplesTxt.text = exBuf.toString();
+		} else {
+			examplesTxt.text = '';
 		}
 
-		sb.add('\n\nMod ');
-		sb.add(Std.string(currentIdx + 1));
-		sb.add(' of ');
-		sb.add(Std.string(pending.length));
-		bodyTxt.text = sb.toString();
+		bodyTxt.text = body.toString();
 		onTrust = false;
 	}
 
