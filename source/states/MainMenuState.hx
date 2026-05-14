@@ -121,6 +121,16 @@ class MainMenuState extends MusicBeatState {
 		}
 		#end
 
+		#if MODS_ALLOWED
+		if (ClientPrefs.data.modSecurityEnabled) {
+			final pending = backend.ModSecurity.getPendingMods();
+			if (pending.length > 0) {
+				persistentUpdate = false;
+				openSubState(new substates.ModSecuritySubstate(pending));
+			}
+		}
+		#end
+
 		FlxG.camera.follow(camFollow, null, 0.15);
 	}
 

@@ -86,6 +86,21 @@ class HScript extends Iris {
 				this.modFolder = myFolder[1];
 			#end
 		}
+
+		#if MODS_ALLOWED
+		// Security gate: standalone HScripts loaded from a blocked mod are not run.
+		// HScripts spawned by a Lua parent inherit the parent's already-vetted trust state.
+		if (parent == null && this.modFolder != null && backend.ModSecurity.isBlocked(this.modFolder)) {
+			super('', new IrisConfig(file, false, false));
+			var customInterp:CustomInterp = new CustomInterp();
+			customInterp.parentInstance = FlxG.state;
+			customInterp.showPosOnLog = false;
+			this.interp = customInterp;
+			trace('HScript: blocked $file -- mod "${this.modFolder}" not trusted');
+			return;
+		}
+		#end
+
 		var scriptThing:String = file;
 		var scriptName:String = null;
 		if (parent == null && file != null) {

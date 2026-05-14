@@ -50,6 +50,27 @@ class FunkinLua {
 	public static var customFunctions:Map<String, Dynamic> = new Map<String, Dynamic>();
 
 	public function new(scriptName:String) {
+		this.scriptName = scriptName.trim();
+		var game:PlayState = PlayState.instance;
+
+		var myFolder:Array<String> = this.scriptName.split('/');
+		#if MODS_ALLOWED
+		if (myFolder[0] + '/' == Paths.mods()
+			&& (Mods.currentModDirectory == myFolder[1] || Mods.getGlobalMods().contains(myFolder[1]))) // is inside mods folder
+			this.modFolder = myFolder[1];
+
+		// Security gate: skip script init if user has not granted trust to this mod
+		// (or its scripts changed since the last decision). The mod's assets still load.
+		if (this.modFolder != null && backend.ModSecurity.isBlocked(this.modFolder)) {
+			closed = true;
+			lua = null;
+			if (game != null && !game.luaArray.contains(this))
+				game.luaArray.push(this); // keep array consistent so callOnLuas iteration is harmless
+			trace('FunkinLua: blocked ${this.scriptName} -- mod "${this.modFolder}" not trusted');
+			return;
+		}
+		#end
+
 		lua = LuaL.newstate();
 		LuaL.openlibs(lua);
 
@@ -58,17 +79,8 @@ class FunkinLua {
 
 		// LuaL.dostring(lua, CLENSE);
 
-		this.scriptName = scriptName.trim();
-		var game:PlayState = PlayState.instance;
 		if (game != null)
 			game.luaArray.push(this);
-
-		var myFolder:Array<String> = this.scriptName.split('/');
-		#if MODS_ALLOWED
-		if (myFolder[0] + '/' == Paths.mods()
-			&& (Mods.currentModDirectory == myFolder[1] || Mods.getGlobalMods().contains(myFolder[1]))) // is inside mods folder
-			this.modFolder = myFolder[1];
-		#end
 
 		// Lua shit
 		set('Function_StopLua', LuaUtils.Function_StopLua);
