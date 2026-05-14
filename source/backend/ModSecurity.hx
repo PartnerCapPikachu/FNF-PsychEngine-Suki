@@ -18,6 +18,15 @@ typedef ModSecurityRecord = {
 	var hash:String;
 	var allowed:Bool;
 	var findings:Array<ModSecurityFinding>;
+	// Fast pre-check: file count + summed mtimes of all script files. If this
+	// matches, we skip the expensive content hash entirely. Optional for
+	// backward compat with previously saved records.
+	@:optional var stamp:String;
+	// True once the user has explicitly chosen Trust or Block in the prompt.
+	// `getPendingMods` ignores any record where this is true so we never
+	// re-prompt for an already-decided mod -- only when its scripts actually
+	// change (hash mismatch in `isBlocked`) does this get reset to false.
+	@:optional var decided:Bool;
 }
 
 /**
@@ -91,7 +100,9 @@ class ModSecurity {
 			var r:ModSecurityRecord = {
 				hash:     (rec.hash != null) ? rec.hash : "",
 				allowed:  (rec.allowed == true),
-				findings: (rec.findings != null) ? rec.findings : []
+				findings: (rec.findings != null) ? rec.findings : [],
+				stamp:    (rec.stamp != null) ? rec.stamp : null,
+				decided:  (rec.decided == true)
 			};
 			records.set(folder, r);
 		}
@@ -124,10 +135,12 @@ class ModSecurity {
 		load();
 		var rec = records.get(folder);
 		if (rec == null) {
-			rec = {hash: computeHash(folder), allowed: allowed, findings: scanMod(folder)};
+			rec = {hash: computeHash(folder), allowed: allowed, findings: scanMod(folder), stamp: computeStamp(folder), decided: true};
 			records.set(folder, rec);
 		} else {
 			rec.allowed = allowed;
+			rec.decided = true;
+			if (rec.stamp == null) rec.stamp = computeStamp(folder);
 		}
 		checkedThisSession.set(folder, true);
 		save();
@@ -148,25 +161,36 @@ class ModSecurity {
 			return cached == null ? false : !cached.allowed;
 		}
 		var rec = records.get(folder);
+		// Fast pre-check: stat-based stamp. If it matches the saved one, skip
+		// the expensive content hash + scan entirely.
+		if (rec != null && rec.stamp != null) {
+			final currentStamp = computeStamp(folder);
+			if (currentStamp == rec.stamp) {
+				checkedThisSession.set(folder, true);
+				return !rec.allowed;
+			}
+		}
 		var currentHash = computeHash(folder);
 		if (rec == null) {
 			var findings = scanMod(folder);
-			rec = {hash: currentHash, allowed: (findings.length == 0), findings: findings};
+			rec = {hash: currentHash, allowed: (findings.length == 0), findings: findings, stamp: computeStamp(folder)};
 			records.set(folder, rec);
 			save();
 			checkedThisSession.set(folder, true);
 			return !rec.allowed;
 		}
 		if (currentHash != rec.hash) {
-			// Scripts changed -- re-scan and revoke trust if anything risky
-			// is now present. If the new scan is clean, keep the mod allowed.
+			// Scripts changed -- re-scan, revoke trust if anything risky is now
+			// present, and clear the user's prior decision so the prompt re-shows.
 			var findings = scanMod(folder);
 			rec.hash = currentHash;
 			rec.findings = findings;
 			if (findings.length == 0) rec.allowed = true;
 			else rec.allowed = false;
-			save();
+			rec.decided = false;
 		}
+		rec.stamp = computeStamp(folder);
+		save();
 		checkedThisSession.set(folder, true);
 		return !rec.allowed;
 	}
@@ -180,7 +204,9 @@ class ModSecurity {
 			var folder = enabled[i];
 			isBlocked(folder); // ensures record exists / is up-to-date
 			var rec = records.get(folder);
-			if (rec != null && !rec.allowed && rec.findings.length > 0)
+			// Only mods that have findings AND the user has never decided on yet
+			// (or whose decision was reset by a script change) are pending.
+			if (rec != null && !rec.decided && rec.findings.length > 0)
 				out.push(folder);
 		}
 		return out;
@@ -255,6 +281,38 @@ class ModSecurity {
 		final buf = new StringBuf();
 		try hashDir(modPath, buf) catch (e:Dynamic) {}
 		return Md5.encode(buf.toString());
+	}
+
+	// Cheap fingerprint: script file count + summed modification times.
+	// Pure stat calls (no content reads / no MD5). Used as a fast-skip
+	// pre-check so we only fall back to the real content hash when the
+	// stamp differs from what we recorded last time.
+	public static function computeStamp(folder:String):String {
+		final modPath:String = Paths.mods(folder);
+		if (!FileSystem.exists(modPath) || !FileSystem.isDirectory(modPath)) return '';
+		final acc = {count: 0, mtimeSum: 0.0};
+		try stampDir(modPath, acc) catch (e:Dynamic) {}
+		return acc.count + ':' + acc.mtimeSum;
+	}
+
+	static function stampDir(dir:String, acc:{count:Int, mtimeSum:Float}):Void {
+		final entries = FileSystem.readDirectory(dir);
+		final entryCount:Int = entries.length;
+		for (i in 0...entryCount) {
+			final entry = entries[i];
+			final full = Path.join([dir, entry]);
+			if (FileSystem.isDirectory(full)) {
+				stampDir(full, acc);
+				continue;
+			}
+			final lower = entry.toLowerCase();
+			if (!lower.endsWith('.lua') && !lower.endsWith('.hx') && !lower.endsWith('.hxs') && !lower.endsWith('.hscript') && !lower.endsWith('.hxc')) continue;
+			try {
+				final stat = FileSystem.stat(full);
+				acc.count++;
+				acc.mtimeSum += stat.mtime.getTime();
+			} catch (e:Dynamic) {}
+		}
 	}
 
 	static function hashDir(dir:String, buf:StringBuf):Void {
