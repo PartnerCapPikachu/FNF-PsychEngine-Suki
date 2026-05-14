@@ -2708,27 +2708,35 @@ class PlayState extends MusicBeatState {
 		if (Conductor.songPosition >= 0)
 			Conductor.songPosition = FlxG.sound.music.time + Conductor.offset;
 
-		// obtain notes that the player can hit
-		var plrInputNotes:Array<Note> = notes.members.filter(function(n:Note):Bool {
-			var canHit:Bool = n != null && !strumsBlocked[n.noteData] && n.canBeHit && n.mustPress && !n.tooLate && !n.wasGoodHit && !n.blockHit;
-			return canHit && !n.isSustainNote && n.noteData == key;
-		});
-		plrInputNotes.sort(sortHitNotes);
+		// obtain notes that the player can hit -- pick top-2 (by sortHitNotes)
+		// in a single members[] sweep, no allocation, no Array.sort.
+		final blocked = strumsBlocked[key];
+		var funnyNote:Note = null;
+		var doubleNote:Note = null;
+		if (!blocked) {
+			final members = notes.members;
+			final mlen = members.length;
+			for (i in 0...mlen) {
+				final n = members[i];
+				if (n == null || n.noteData != key || n.isSustainNote) continue;
+				if (!n.canBeHit || !n.mustPress || n.tooLate || n.wasGoodHit || n.blockHit) continue;
+				if (funnyNote == null || sortHitNotes(n, funnyNote) < 0) {
+					doubleNote = funnyNote;
+					funnyNote = n;
+				} else if (doubleNote == null || sortHitNotes(n, doubleNote) < 0) {
+					doubleNote = n;
+				}
+			}
+		}
 
-		if (plrInputNotes.length != 0) { // slightly faster than doing `> 0` lol
-			var funnyNote:Note = plrInputNotes[0]; // front note
-
-			if (plrInputNotes.length > 1) {
-				var doubleNote:Note = plrInputNotes[1];
-
-				if (doubleNote.noteData == funnyNote.noteData) {
-					// if the note has a 0ms distance (is on top of the current note), kill it
-					if (Math.abs(doubleNote.strumTime - funnyNote.strumTime) < 1.0)
-						invalidateNote(doubleNote);
-					else if (doubleNote.strumTime < funnyNote.strumTime) {
-						// replace the note if its ahead of time (or at least ensure "doubleNote" is ahead)
-						funnyNote = doubleNote;
-					}
+		if (funnyNote != null) {
+			if (doubleNote != null) {
+				// if the note has a 0ms distance (is on top of the current note), kill it
+				if (Math.abs(doubleNote.strumTime - funnyNote.strumTime) < 1.0)
+					invalidateNote(doubleNote);
+				else if (doubleNote.strumTime < funnyNote.strumTime) {
+					// replace the note if its ahead of time (or at least ensure "doubleNote" is ahead)
+					funnyNote = doubleNote;
 				}
 			}
 			goodNoteHit(funnyNote);
