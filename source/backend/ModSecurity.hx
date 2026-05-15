@@ -57,6 +57,7 @@ class ModSecurity {
 		{p: ~/\bos\.execute\b/,      name: "os.execute"},
 		{p: ~/\bos\.remove\b/,       name: "os.remove"},
 		{p: ~/\bos\.rename\b/,       name: "os.rename"},
+		{p: ~/\bos\.exit\b/,         name: "os.exit"},
 		{p: ~/\bio\.popen\b/,        name: "io.popen"},
 		{p: ~/\bloadstring\b/,       name: "loadstring"},
 		{p: ~/\bdofile\b/,           name: "dofile"},
@@ -67,6 +68,9 @@ class ModSecurity {
 	static final LUA_PATTERNS_MED:Array<{p:EReg, name:String}> = [
 		{p: ~/\bgetTextFromFile\b/,  name: "getTextFromFile"},
 		{p: ~/\bio\.open\b/,         name: "io.open"},
+		{p: ~/\bos\.getenv\b/,       name: "os.getenv"},
+		{p: ~/\bos\.tmpname\b/,      name: "os.tmpname"},
+		{p: ~/\bos\.setlocale\b/,    name: "os.setlocale"},
 	];
 
 	static final HX_PATTERNS_HIGH:Array<{p:EReg, name:String}> = [

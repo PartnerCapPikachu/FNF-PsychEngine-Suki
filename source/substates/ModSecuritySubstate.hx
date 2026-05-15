@@ -48,13 +48,15 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 		"import sys" => "reflect", "import cpp" => "reflect", "import Sys" => "reflect",
 		"openfl.Lib.application" => "reflect",
 		// Process exit
-		"Sys.exit" => "exit",
+		"Sys.exit" => "exit", "os.exit" => "exit",
+		// Environment / system info recon
+		"os.getenv" => "recon", "os.tmpname" => "recon", "os.setlocale" => "recon",
 		// Direct attempts to tamper with the security system itself
 		"ModSecurity (tamper)" => "tamper",
 	];
 
 	// Order matters: categories shown in this order in the warning panel.
-	static final CATEGORY_ORDER:Array<String> = ["tamper", "exec", "fs_write", "haxe_eval", "fs_read", "reflect", "exit"];
+	static final CATEGORY_ORDER:Array<String> = ["tamper", "exec", "fs_write", "haxe_eval", "fs_read", "reflect", "exit", "recon"];
 
 	static final CATEGORY_LABELS:Map<String, String> = [
 		"tamper"    => "[!!] Attempts to tamper with the mod security system itself",
@@ -64,6 +66,7 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 		"fs_read"   => "[*] Reads files from your PC",
 		"reflect"   => "[*] Uses reflection / dynamic class lookup",
 		"exit"      => "[*] Can force-quit the game process",
+		"recon"     => "[*] Reads environment variables / system info",
 	];
 
 	// Panel layout (centered)
