@@ -38,7 +38,14 @@ typedef ModSecurityRecord = {
  * the script-loading paths in FunkinLua / HScript skip that mod's scripts
  * entirely. The mod itself stays enabled -- its assets, stages, characters
  * etc. continue to load -- only its scripts are gated.
+ *
+ * `@:unreflective` strips the cpp reflection scaffolding from this class,
+ * so `Reflect.field` / `Reflect.setField` against it return null/no-op even
+ * if a mod somehow gets a `Class<>` reference. Combined with the runtime
+ * `BLOCKED_CLASSES` blocklist used by `safeResolveClass`, this is two
+ * independent layers of defense against tampering with trust state.
  */
+@:unreflective
 class ModSecurity {
 	// Patterns that allow filesystem write/delete or arbitrary code exec.
 	static final LUA_PATTERNS_HIGH:Array<{p:EReg, name:String}> = [
@@ -54,6 +61,7 @@ class ModSecurity {
 		{p: ~/\bloadstring\b/,       name: "loadstring"},
 		{p: ~/\bdofile\b/,           name: "dofile"},
 		{p: ~/\bloadfile\b/,         name: "loadfile"},
+		{p: ~/\bModSecurity\b/,      name: "ModSecurity (tamper)"},
 	];
 	// Patterns that read files or do dynamic class lookup (lower risk).
 	static final LUA_PATTERNS_MED:Array<{p:EReg, name:String}> = [
@@ -69,6 +77,7 @@ class ModSecurity {
 		{p: ~/\bsys\.FileSystem\b/,     name: "sys.FileSystem"},
 		{p: ~/\bcpp\.Lib\.load\b/,      name: "cpp.Lib.load"},
 		{p: ~/\bopenfl\.Lib\.application\b/, name: "openfl.Lib.application"},
+		{p: ~/\bModSecurity\b/,         name: "ModSecurity (tamper)"},
 	];
 	static final HX_PATTERNS_MED:Array<{p:EReg, name:String}> = [
 		{p: ~/\bType\.resolveClass\b/,    name: "Type.resolveClass"},
@@ -78,6 +87,30 @@ class ModSecurity {
 		{p: ~/\bimport\s+cpp(\.|\s|;)/,   name: "import cpp"},
 		{p: ~/\bimport\s+Sys(\s|;)/,      name: "import Sys"},
 	];
+
+	// Class names that mod scripts are NOT allowed to resolve via reflection.
+	// Anything in here returns null from `safeResolveClass`, even if Haxe RTTI
+	// would otherwise hand back the Class<>. This prevents a mod from doing
+	// `setPropertyFromClass("backend.ModSecurity", "records", {})` to clear
+	// its own block, flip `allowed = true`, etc. The scanner also flags any
+	// textual mention of these names as a HIGH finding.
+	public static final BLOCKED_CLASSES:Map<String, Bool> = [
+		"ModSecurity" => true,
+		"backend.ModSecurity" => true,
+		"ModSecuritySubstate" => true,
+		"substates.ModSecuritySubstate" => true,
+	];
+
+	/**
+	 * Reflection-safe replacement for `Type.resolveClass`. Returns null for
+	 * any class on the blocklist. Use this from EVERY mod-script entry point
+	 * that resolves a class by name (Lua callbacks, HScript imports, etc.).
+	 */
+	public static inline function safeResolveClass(name:String):Class<Dynamic> {
+		if (name == null) return null;
+		if (BLOCKED_CLASSES.exists(name)) return null;
+		return Type.resolveClass(name);
+	}
 
 	public static var records:Map<String, ModSecurityRecord> = new Map();
 	static var loaded:Bool = false;

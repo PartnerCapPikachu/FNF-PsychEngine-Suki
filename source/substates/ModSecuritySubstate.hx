@@ -24,10 +24,56 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 		"addHaxeLibrary" => true,
 	];
 
+	// Categorize each pattern. Used to surface concrete, human-readable
+	// warnings ("This mod can save files to your PC", etc.) instead of raw
+	// API names. Anything not in this map is treated as "other".
+	static final PATTERN_CATEGORY:Map<String, String> = [
+		// File writes / deletes
+		"saveFile" => "fs_write", "deleteFile" => "fs_write",
+		"os.remove" => "fs_write", "os.rename" => "fs_write",
+		// File reads
+		"getTextFromFile" => "fs_read", "io.open" => "fs_read",
+		"sys.io.File" => "fs_write", "sys.FileSystem" => "fs_write",
+		// External command execution
+		"os.execute" => "exec", "io.popen" => "exec",
+		"Sys.command" => "exec", "sys.io.Process" => "exec",
+		"cpp.Lib.load" => "exec",
+		// Arbitrary Haxe / Lua eval
+		"runHaxeCode" => "haxe_eval", "runHaxeFunction" => "haxe_eval",
+		"addHaxeLibrary" => "haxe_eval",
+		"loadstring" => "haxe_eval", "dofile" => "haxe_eval", "loadfile" => "haxe_eval",
+		// Reflection / dynamic class lookup
+		"Type.resolveClass" => "reflect", "Type.createInstance" => "reflect",
+		"Reflect.callMethod" => "reflect",
+		"import sys" => "reflect", "import cpp" => "reflect", "import Sys" => "reflect",
+		"openfl.Lib.application" => "reflect",
+		// Process exit
+		"Sys.exit" => "exit",
+		// Direct attempts to tamper with the security system itself
+		"ModSecurity (tamper)" => "tamper",
+	];
+
+	// Order matters: categories shown in this order in the warning panel.
+	static final CATEGORY_ORDER:Array<String> = ["tamper", "exec", "fs_write", "haxe_eval", "fs_read", "reflect", "exit"];
+
+	static final CATEGORY_LABELS:Map<String, String> = [
+		"tamper"    => "[!!] Attempts to tamper with the mod security system itself",
+		"exec"      => "[!] Runs external programs / commands on your PC",
+		"fs_write"  => "[!] Writes, modifies or deletes files on your PC",
+		"haxe_eval" => "[!] Executes arbitrary Haxe/Lua code at runtime",
+		"fs_read"   => "[*] Reads files from your PC",
+		"reflect"   => "[*] Uses reflection / dynamic class lookup",
+		"exit"      => "[*] Can force-quit the game process",
+	];
+
 	// Panel layout (centered)
 	static inline final PANEL_W:Int = 900;
 	static inline final PANEL_H:Int = 560;
 	static inline final BORDER:Int = 3;
+	// Scrollable findings list area (relative to panel top)
+	static inline final LIST_TOP:Int = 280;
+	static inline final LIST_LINES:Int = 9; // visible rows
+	static inline final LIST_LINE_H:Int = 18;
 
 	var pending:Array<String>;
 	var currentIdx:Int = 0;
@@ -40,9 +86,15 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 	var titleTxt:FlxText;
 	var subTitleTxt:FlxText;
 	var bodyTxt:FlxText;
-	var examplesTxt:FlxText;
+	var listHeaderTxt:FlxText;
+	var listTxt:FlxText;
+	var listScrollHint:FlxText;
 	var hintTxt:FlxText;
 	var counterTxt:FlxText;
+
+	// Scrollable findings list state for the current mod.
+	var displayFindings:Array<ModSecurityFinding> = [];
+	var listScroll:Int = 0;
 
 	var trustTxt:Alphabet;
 	var blockTxt:Alphabet;
@@ -113,11 +165,23 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 		bodyTxt.scrollFactor.set();
 		add(bodyTxt);
 
-		examplesTxt = new FlxText(px + 18, py + 240, PANEL_W - 36, "", 13);
-		examplesTxt.setFormat(Paths.font("vcr.ttf"), 13, 0xFFCCCCCC, LEFT, OUTLINE, FlxColor.BLACK);
-		examplesTxt.borderSize = 1;
-		examplesTxt.scrollFactor.set();
-		add(examplesTxt);
+		listHeaderTxt = new FlxText(px + 18, py + LIST_TOP - 22, PANEL_W - 36, "Detected calls (UP/DOWN or wheel to scroll):", 13);
+		listHeaderTxt.setFormat(Paths.font("vcr.ttf"), 13, 0xFFB0B0B0, LEFT, OUTLINE, FlxColor.BLACK);
+		listHeaderTxt.borderSize = 1;
+		listHeaderTxt.scrollFactor.set();
+		add(listHeaderTxt);
+
+		listTxt = new FlxText(px + 18, py + LIST_TOP, PANEL_W - 36, "", 13);
+		listTxt.setFormat(Paths.font("vcr.ttf"), 13, 0xFFCCCCCC, LEFT, OUTLINE, FlxColor.BLACK);
+		listTxt.borderSize = 1;
+		listTxt.scrollFactor.set();
+		add(listTxt);
+
+		listScrollHint = new FlxText(px + 18, py + LIST_TOP + LIST_LINES * LIST_LINE_H + 2, PANEL_W - 36, "", 12);
+		listScrollHint.setFormat(Paths.font("vcr.ttf"), 12, 0xFF888888, RIGHT, OUTLINE, FlxColor.BLACK);
+		listScrollHint.borderSize = 1;
+		listScrollHint.scrollFactor.set();
+		add(listScrollHint);
 
 		// Choice buttons inside the panel
 		final btnY:Float = py + PANEL_H - 90;
@@ -152,73 +216,47 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 		counterTxt.text = 'Mod ${currentIdx + 1} / ${pending.length}';
 		subTitleTxt.text = '"$folder"';
 
+		// Collect categories present and build the displayable findings list.
+		displayFindings = [];
+		listScroll = 0;
+
 		final body = new StringBuf();
 		body.add('This mod\'s scripts use APIs that can be abused for harm.\n');
-		body.add('  - TRUST: scripts run normally.\n');
-		body.add('  - BLOCK: mod stays enabled, but its scripts are skipped.\n');
+		body.add('TRUST = scripts run normally.   BLOCK = mod stays enabled, scripts skipped.\n');
 
 		if (rec != null) {
-			final seenHigh = new Map<String, Bool>();
-			final seenMed = new Map<String, Bool>();
-			final highList:Array<String> = [];
-			final medList:Array<String> = [];
+			final seenCat = new Map<String, Bool>();
+			final cats:Array<String> = [];
 			final findings = rec.findings;
 			final fLen = findings.length;
 			for (i in 0...fLen) {
 				final f = findings[i];
 				if (HIDDEN_FROM_DISPLAY.exists(f.pattern)) continue;
-				if (f.severity == 0) {
-					if (seenHigh.exists(f.pattern)) continue;
-					seenHigh.set(f.pattern, true);
-					highList.push(f.pattern);
-				} else {
-					if (seenMed.exists(f.pattern)) continue;
-					seenMed.set(f.pattern, true);
-					medList.push(f.pattern);
+				displayFindings.push(f);
+				final cat = PATTERN_CATEGORY.exists(f.pattern) ? PATTERN_CATEGORY.get(f.pattern) : "other";
+				if (!seenCat.exists(cat)) {
+					seenCat.set(cat, true);
+					cats.push(cat);
 				}
 			}
-			if (highList.length > 0) {
-				body.add('\nHIGH risk:    ');
-				body.add(highList.join(', '));
+			// Always print categories in the canonical order, only the ones present.
+			final orderLen = CATEGORY_ORDER.length;
+			body.add('\nThis mod can:');
+			var anyCat:Bool = false;
+			for (i in 0...orderLen) {
+				final cat = CATEGORY_ORDER[i];
+				if (!seenCat.exists(cat)) continue;
+				anyCat = true;
+				body.add('\n  ');
+				body.add(CATEGORY_LABELS.get(cat));
 			}
-			if (medList.length > 0) {
-				body.add('\nMEDIUM risk:  ');
-				body.add(medList.join(', '));
+			// Catch-all for patterns not in PATTERN_CATEGORY.
+			if (seenCat.exists("other")) {
+				body.add('\n  [*] Other sensitive APIs (see list below)');
+				anyCat = true;
 			}
-			if (highList.length == 0 && medList.length == 0)
-				body.add('\n(only common APIs found -- listed examples below)');
-
-			// Build examples from non-hidden findings only.
-			final exBuf = new StringBuf();
-			exBuf.add('Examples:');
-			var shown:Int = 0;
-			var skipped:Int = 0;
-			final maxShown:Int = 6;
-			for (i in 0...fLen) {
-				final f = findings[i];
-				if (HIDDEN_FROM_DISPLAY.exists(f.pattern)) continue;
-				if (shown >= maxShown) {
-					skipped++;
-					continue;
-				}
-				exBuf.add('\n  ');
-				exBuf.add(f.file);
-				exBuf.add(':');
-				exBuf.add(Std.string(f.line));
-				exBuf.add('  ');
-				exBuf.add(f.pattern);
-				shown++;
-			}
-			if (shown == 0)
-				exBuf.add('\n  (no displayable examples)');
-			else if (skipped > 0) {
-				exBuf.add('\n  ... ');
-				exBuf.add(Std.string(skipped));
-				exBuf.add(' more');
-			}
-			examplesTxt.text = exBuf.toString();
-		} else {
-			examplesTxt.text = '';
+			if (!anyCat)
+				body.add('\n  (only common APIs found -- review the list below)');
 		}
 
 		bodyTxt.text = body.toString();
@@ -226,6 +264,38 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 		// is already trusted (i.e. user previously decided to allow). Brand-new
 		// prompts (no decision yet) start on BLOCK as the safer default.
 		onTrust = (rec != null && rec.allowed && rec.decided);
+		refreshList();
+	}
+
+	function refreshList():Void {
+		final total:Int = displayFindings.length;
+		if (total == 0) {
+			listTxt.text = '  (no displayable findings)';
+			listScrollHint.text = '';
+			return;
+		}
+		// Clamp scroll
+		final maxScroll:Int = (total > LIST_LINES) ? (total - LIST_LINES) : 0;
+		if (listScroll < 0) listScroll = 0;
+		else if (listScroll > maxScroll) listScroll = maxScroll;
+
+		final buf = new StringBuf();
+		final endIdx:Int = (listScroll + LIST_LINES > total) ? total : (listScroll + LIST_LINES);
+		for (i in listScroll...endIdx) {
+			final f = displayFindings[i];
+			if (i > listScroll) buf.add('\n');
+			buf.add(f.file);
+			buf.add(':');
+			buf.add(Std.string(f.line));
+			buf.add('  ');
+			buf.add(f.pattern);
+		}
+		listTxt.text = buf.toString();
+		if (total > LIST_LINES) {
+			listScrollHint.text = '${listScroll + 1}-${endIdx} of ${total}';
+		} else {
+			listScrollHint.text = '${total} item' + (total == 1 ? '' : 's');
+		}
 	}
 
 	function updateOptions():Void {
@@ -252,6 +322,20 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 			FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
 			onTrust = !onTrust;
 			updateOptions();
+		}
+
+		// Findings list scrolling -- UP/DOWN keys (held works via _P? we want
+		// repeating, so use the non-_P variant gated by a simple cooldown).
+		if (controls.UI_UP_P) {
+			listScroll--;
+			refreshList();
+		} else if (controls.UI_DOWN_P) {
+			listScroll++;
+			refreshList();
+		}
+		if (FlxG.mouse.wheel != 0) {
+			listScroll -= FlxG.mouse.wheel;
+			refreshList();
 		}
 
 		if (controls.ACCEPT) {

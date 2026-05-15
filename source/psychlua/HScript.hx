@@ -342,7 +342,7 @@ class HScript extends Iris {
 				if (libPackage.length > 0)
 					str = libPackage + '.';
 
-				set(libName, Type.resolveClass(str + libName));
+				set(libName, #if MODS_ALLOWED backend.ModSecurity.safeResolveClass(str + libName) #else Type.resolveClass(str + libName) #end);
 			} catch (e:IrisError) {
 				Iris.error(Printer.errorToString(e, false), this.interp.posInfos());
 			}
@@ -405,7 +405,7 @@ class HScript extends Iris {
 			else if (libName == null)
 				libName = '';
 
-			var c:Dynamic = Type.resolveClass(str + libName);
+			var c:Dynamic = #if MODS_ALLOWED backend.ModSecurity.safeResolveClass(str + libName) #else Type.resolveClass(str + libName) #end;
 			if (c == null)
 				c = Type.resolveEnum(str + libName);
 

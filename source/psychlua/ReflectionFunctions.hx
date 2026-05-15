@@ -30,7 +30,7 @@ class ReflectionFunctions {
 			return value;
 		});
 		Lua_helper.add_callback(lua, "getPropertyFromClass", function(classVar:String, variable:String, ?allowMaps:Bool = false) {
-			var myClass:Dynamic = Type.resolveClass(classVar);
+			var myClass:Dynamic = #if MODS_ALLOWED backend.ModSecurity.safeResolveClass(classVar) #else Type.resolveClass(classVar) #end;
 			if (myClass == null) {
 				FunkinLua.luaTrace('getPropertyFromClass: Class $classVar not found', false, false, FlxColor.RED);
 				return null;
@@ -48,7 +48,7 @@ class ReflectionFunctions {
 		});
 		Lua_helper.add_callback(lua, "setPropertyFromClass",
 			function(classVar:String, variable:String, value:Dynamic, ?allowMaps:Bool = false, ?allowInstances:Bool = false) {
-				var myClass:Dynamic = Type.resolveClass(classVar);
+				var myClass:Dynamic = #if MODS_ALLOWED backend.ModSecurity.safeResolveClass(classVar) #else Type.resolveClass(classVar) #end;
 				if (myClass == null) {
 					FunkinLua.luaTrace('setPropertyFromClass: Class $classVar not found', false, false, FlxColor.RED);
 					return null;
@@ -199,7 +199,7 @@ class ReflectionFunctions {
 			return Reflect.callMethod(null, parent, parseInstances(args));
 		});
 		Lua_helper.add_callback(lua, "callMethodFromClass", function(className:String, funcToRun:String, ?args:Array<Dynamic>) {
-			return callMethodFromObject(Type.resolveClass(className), funcToRun, parseInstances(args));
+			return callMethodFromObject(#if MODS_ALLOWED backend.ModSecurity.safeResolveClass(className) #else Type.resolveClass(className) #end, funcToRun, parseInstances(args));
 		});
 
 		Lua_helper.add_callback(lua, "createInstance", function(variableToSave:String, className:String, ?args:Array<Dynamic>) {
@@ -209,7 +209,7 @@ class ReflectionFunctions {
 			if (MusicBeatState.getVariables().get(variableToSave) == null) {
 				if (args == null)
 					args = [];
-				var myType:Dynamic = Type.resolveClass(className);
+				var myType:Dynamic = #if MODS_ALLOWED backend.ModSecurity.safeResolveClass(className) #else Type.resolveClass(className) #end;
 
 				if (myType == null) {
 					FunkinLua.luaTrace('createInstance: Class $className not found', false, false, FlxColor.RED);
@@ -278,7 +278,7 @@ class ReflectionFunctions {
 				var lastIndex:Int = argStr.lastIndexOf('::');
 
 				var split:Array<String> = (lastIndex > -1) ? argStr.substring(0, lastIndex).split('.') : argStr.split('.');
-				arg = (lastIndex > -1) ? Type.resolveClass(argStr.substring(lastIndex + 2)) : PlayState.instance;
+				arg = (lastIndex > -1) ? (#if MODS_ALLOWED backend.ModSecurity.safeResolveClass(argStr.substring(lastIndex + 2)) #else Type.resolveClass(argStr.substring(lastIndex + 2)) #end) : PlayState.instance;
 				for (j in 0...split.length) {
 					// trace('Op2: ${Type.getClass(args[i])}, ${split[j]}');
 					arg = LuaUtils.getVarInArray(arg, split[j].trim());

@@ -63,6 +63,11 @@
 
 	<classpath name="source" />
 
+	<!-- Reroute every Type.resolveClass() call inside hscript-iris through
+	     ModSecurity.safeResolveClass so mod scripts can't import / instantiate
+	     blocklisted classes (ModSecurity itself, etc). -->
+	<haxeflag name="--macro" value="macros.PatchIris.patch()" if="MODS_ALLOWED" />
+
 	<!-- __________________________ Game Assets & Etc. __________________________ -->
 	
 	<!-- Turn on Crash Handler -->
