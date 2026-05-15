@@ -212,6 +212,30 @@ class ModSecurity {
 		return out;
 	}
 
+	/** All enabled mods that have any sensitive findings, regardless of prior decision.
+	    Used by the Mods menu "MOD SECURITY" button to let users review/change trust. */
+	public static function getReviewableMods():Array<String> {
+		load();
+		var out:Array<String> = [];
+		var enabled = Mods.parseList().enabled;
+		for (i in 0...enabled.length) {
+			var folder = enabled[i];
+			isBlocked(folder); // ensures record exists / is up-to-date
+			var rec = records.get(folder);
+			if (rec != null && rec.findings.length > 0)
+				out.push(folder);
+		}
+		return out;
+	}
+
+	/** True if a single mod has any sensitive findings (i.e. would show in a review). */
+	public static function hasFindings(folder:String):Bool {
+		load();
+		isBlocked(folder); // ensures record exists / is up-to-date
+		var rec = records.get(folder);
+		return rec != null && rec.findings.length > 0;
+	}
+
 	public static function scanMod(folder:String):Array<ModSecurityFinding> {
 		var modPath:String = Paths.mods(folder);
 		if (!FileSystem.exists(modPath) || !FileSystem.isDirectory(modPath))

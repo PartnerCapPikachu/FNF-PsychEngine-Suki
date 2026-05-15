@@ -27,6 +27,7 @@ class ModsMenuState extends MusicBeatState {
 	var buttonDisableAll:MenuButton;
 	var buttons:Array<MenuButton> = [];
 	var settingsButton:MenuButton;
+	var securityButton:MenuButton;
 
 	var bgTitle:FlxSprite;
 	var bgDescription:FlxSprite;
@@ -208,7 +209,7 @@ class ModsMenuState extends MusicBeatState {
 		bgButtons.alpha = 0.2;
 		add(bgButtons);
 
-		var buttonsX = bgButtons.x + 320;
+		var buttonsX = bgButtons.x + 240;
 		var buttonsY = bgButtons.y + 10;
 
 		var button = new MenuButton(buttonsX, buttonsY, 80, 80, Paths.image('modsMenuButtons'), function() moveModToPosition(0), 54, 54); // Move to the top
@@ -282,6 +283,27 @@ class ModsMenuState extends MusicBeatState {
 			if (!focus)
 				button.bg.color = modsList.enabled.contains(modsGroup.members[curSelectedMod].folder) ? FlxColor.GREEN : 0xFFFF6666;
 		};
+
+		securityButton = new MenuButton(buttonsX + 500, buttonsY, 80, 80, 'SEC', function() // Mod Security
+		{
+			var curMod:ModItem = modsGroup.members[curSelectedMod];
+			if (curMod == null) return;
+			if (!ClientPrefs.data.modSecurityEnabled) {
+				FlxG.sound.play(Paths.sound('cancelMenu'), 0.6);
+				return;
+			}
+			if (!backend.ModSecurity.hasFindings(curMod.folder)) {
+				FlxG.sound.play(Paths.sound('cancelMenu'), 0.6);
+				return;
+			}
+			FlxG.sound.play(Paths.sound('confirmMenu'), 0.6);
+			openSubState(new substates.ModSecuritySubstate([curMod.folder]));
+		});
+		securityButton.bg.color = 0xFF3366CC;
+		securityButton.focusChangeCallback = function(focus:Bool) if (!focus)
+			securityButton.bg.color = 0xFF3366CC;
+		add(securityButton);
+		buttons.push(securityButton);
 
 		if (modsList.all.length < 1) {
 			for (btn in buttons)
@@ -655,6 +677,8 @@ class ModsMenuState extends MusicBeatState {
 			if (button.focusChangeCallback != null)
 				button.focusChangeCallback(button.onFocus);
 		settingsButton.enabled = (curMod.settings != null && curMod.settings.length > 0);
+		if (securityButton != null)
+			securityButton.enabled = ClientPrefs.data.modSecurityEnabled && backend.ModSecurity.hasFindings(curMod.folder);
 	}
 
 	var centerMod:Int = 2;

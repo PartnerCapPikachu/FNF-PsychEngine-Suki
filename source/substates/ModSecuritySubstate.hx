@@ -222,7 +222,10 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 		}
 
 		bodyTxt.text = body.toString();
-		onTrust = false;
+		// Cursor defaults to reflect current state: TRUST highlighted only if mod
+		// is already trusted (i.e. user previously decided to allow). Brand-new
+		// prompts (no decision yet) start on BLOCK as the safer default.
+		onTrust = (rec != null && rec.allowed && rec.decided);
 	}
 
 	function updateOptions():Void {
@@ -238,6 +241,12 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 
 	override function update(elapsed:Float):Void {
 		super.update(elapsed);
+
+		if (controls.BACK) {
+			FlxG.sound.play(Paths.sound('cancelMenu'), 0.6);
+			close();
+			return;
+		}
 
 		if (controls.UI_LEFT_P || controls.UI_RIGHT_P) {
 			FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
