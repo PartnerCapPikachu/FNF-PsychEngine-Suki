@@ -98,7 +98,17 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 
 	var trustTxt:Alphabet;
 	var blockTxt:Alphabet;
+	var trustBg:flixel.FlxSprite;
+	var blockBg:flixel.FlxSprite;
+	var selectArrowL:FlxText;
+	var selectArrowR:FlxText;
 	var onTrust:Bool = false;
+
+	// Anchor points (panel-relative) for repositioning the choice buttons each
+	// time their scale changes; cached in create() to avoid recomputation.
+	var trustCenterX:Float = 0;
+	var blockCenterX:Float = 0;
+	var btnCenterY:Float = 0;
 
 	public function new(pending:Array<String>) {
 		super();
@@ -185,15 +195,40 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 
 		// Choice buttons inside the panel
 		final btnY:Float = py + PANEL_H - 90;
+		trustCenterX = px + PANEL_W * 0.30;
+		blockCenterX = px + PANEL_W * 0.70;
+		btnCenterY = btnY;
+
+		// Highlight backplate behind the currently selected option. A solid
+		// colored pill is far more obvious than just tinting letter colors.
+		trustBg = new flixel.FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
+		trustBg.scrollFactor.set();
+		trustBg.visible = false;
+		add(trustBg);
+		blockBg = new flixel.FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
+		blockBg.scrollFactor.set();
+		blockBg.visible = false;
+		add(blockBg);
+
 		trustTxt = new Alphabet(0, btnY, "TRUST", true);
-		trustTxt.x = px + PANEL_W * 0.30 - trustTxt.width * 0.5;
 		trustTxt.scrollFactor.set();
 		add(trustTxt);
 
 		blockTxt = new Alphabet(0, btnY, "BLOCK", true);
-		blockTxt.x = px + PANEL_W * 0.70 - blockTxt.width * 0.5;
 		blockTxt.scrollFactor.set();
 		add(blockTxt);
+
+		selectArrowL = new FlxText(0, btnY, 40, ">", 36);
+		selectArrowL.setFormat(Paths.font("vcr.ttf"), 36, FlxColor.YELLOW, CENTER, OUTLINE, FlxColor.BLACK);
+		selectArrowL.borderSize = 2;
+		selectArrowL.scrollFactor.set();
+		add(selectArrowL);
+
+		selectArrowR = new FlxText(0, btnY, 40, "<", 36);
+		selectArrowR.setFormat(Paths.font("vcr.ttf"), 36, FlxColor.YELLOW, CENTER, OUTLINE, FlxColor.BLACK);
+		selectArrowR.borderSize = 2;
+		selectArrowR.scrollFactor.set();
+		add(selectArrowR);
 
 		hintTxt = new FlxText(px, py + PANEL_H - 28, PANEL_W, "Left/Right to choose -- Enter to confirm", 14);
 		hintTxt.setFormat(Paths.font("vcr.ttf"), 14, 0xFFB0B0B0, CENTER, OUTLINE, FlxColor.BLACK);
@@ -299,14 +334,60 @@ class ModSecuritySubstate extends MusicBeatSubstate {
 	}
 
 	function updateOptions():Void {
-		final trustColor:FlxColor = onTrust ? 0xFF22FF55 : FlxColor.WHITE;
-		final blockColor:FlxColor = !onTrust ? 0xFFFF3344 : FlxColor.WHITE;
+		// Selected option: full size, vivid color (green/red), full alpha.
+		// Unselected: shrunk + dimmed white so the contrast is unmistakable
+		// even for users who don't immediately read the color difference.
+		final selectedScale:Float = 1.0;
+		final unselectedScale:Float = 0.65;
+		final selectedAlpha:Float = 1.0;
+		final unselectedAlpha:Float = 0.4;
+
+		final trustSel:Bool = onTrust;
+		final blockSel:Bool = !onTrust;
+
+		trustTxt.setScale(trustSel ? selectedScale : unselectedScale);
+		trustTxt.alpha = trustSel ? selectedAlpha : unselectedAlpha;
+		blockTxt.setScale(blockSel ? selectedScale : unselectedScale);
+		blockTxt.alpha = blockSel ? selectedAlpha : unselectedAlpha;
+
+		final trustColor:FlxColor = trustSel ? 0xFF22FF55 : 0xFFAAAAAA;
+		final blockColor:FlxColor = blockSel ? 0xFFFF3344 : 0xFFAAAAAA;
 		final tLetters = trustTxt.letters;
 		final tLen:Int = tLetters.length;
 		for (i in 0...tLen) tLetters[i].color = trustColor;
 		final bLetters = blockTxt.letters;
 		final bLen:Int = bLetters.length;
 		for (i in 0...bLen) bLetters[i].color = blockColor;
+
+		// Recenter on the cached anchor points now that widths changed.
+		trustTxt.x = trustCenterX - trustTxt.width * 0.5;
+		trustTxt.y = btnCenterY + (1.0 - (trustSel ? selectedScale : unselectedScale)) * 22;
+		blockTxt.x = blockCenterX - blockTxt.width * 0.5;
+		blockTxt.y = btnCenterY + (1.0 - (blockSel ? selectedScale : unselectedScale)) * 22;
+
+		// Highlight backplate sized to fit the selected button.
+		final selTxt = trustSel ? trustTxt : blockTxt;
+		final selBg = trustSel ? trustBg : blockBg;
+		final otherBg = trustSel ? blockBg : trustBg;
+		final padX:Float = 24;
+		final padY:Float = 12;
+		selBg.visible = true;
+		selBg.color = trustSel ? 0xFF0E3A18 : 0xFF3A0E14;
+		selBg.alpha = 0.85;
+		selBg.setGraphicSize(Std.int(selTxt.width + padX * 2), Std.int(selTxt.height + padY * 2));
+		selBg.updateHitbox();
+		selBg.x = selTxt.x - padX;
+		selBg.y = selTxt.y - padY;
+		otherBg.visible = false;
+
+		// Pointer arrows hugging the selected button.
+		final gap:Float = 8;
+		selectArrowL.x = selTxt.x - selectArrowL.width - gap;
+		selectArrowL.y = selTxt.y + (selTxt.height - selectArrowL.height) * 0.5;
+		selectArrowR.x = selTxt.x + selTxt.width + gap;
+		selectArrowR.y = selTxt.y + (selTxt.height - selectArrowR.height) * 0.5;
+		selectArrowL.color = trustSel ? 0xFF22FF55 : 0xFFFF3344;
+		selectArrowR.color = selectArrowL.color;
 	}
 
 	override function update(elapsed:Float):Void {
