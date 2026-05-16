@@ -145,7 +145,28 @@ class Song {
 		#end
 		rawData = Assets.getText(_lastPath);
 
-		return rawData != null ? parseJSON(rawData, jsonInput) : null;
+		if (rawData != null) return parseJSON(rawData, jsonInput);
+
+		// Psych chart missing — fall back to Funkin Crew v2 format if available.
+		#if MODS_ALLOWED
+		if (backend.funkin.FunkinAssets.isAvailable()) {
+			// Extract difficulty postfix from jsonInput (e.g. "bopeebo-hard" with folder "bopeebo" -> "hard").
+			var difficulty:String = null;
+			if (formattedSong.length > formattedFolder.length && formattedSong.startsWith(formattedFolder)) {
+				final tail:String = formattedSong.substr(formattedFolder.length);
+				if (tail.length > 0 && tail.charCodeAt(0) == '-'.code)
+					difficulty = tail.substr(1);
+			}
+			if (difficulty == null || difficulty.length == 0) difficulty = 'normal';
+
+			final converted:SwagSong = backend.funkin.FunkinChartAdapter.loadFromFunkin(formattedFolder, difficulty);
+			if (converted != null) {
+				trace('Loaded Funkin chart for "$formattedFolder" (difficulty=$difficulty)');
+				return converted;
+			}
+		}
+		#end
+		return null;
 	}
 
 	public static function parseJSON(rawData:String, ?nameForError:String = null, ?convertTo:String = 'psych_v1'):SwagSong {
