@@ -1,6 +1,7 @@
-# Builds Psych Engine (community fork) for Windows / Linux / macOS.
+# Builds Psych Engine (community fork) for Linux / macOS.
+# Windows builds live in build-windows.yml (separate manual dispatch).
 
-name: Build
+name: Build (Linux / macOS)
 
 on:
   workflow_dispatch:
@@ -37,36 +38,6 @@ jobs:
         with:
           name: linuxBuild
           path: export/release/linux/bin
-
-  buildWindows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: krdlab/setup-haxe@v2
-        with:
-          haxe-version: 4.3.7
-
-      - name: Install Haxe dependencies
-        shell: cmd
-        run: |
-          call .\setup\windows.bat
-
-      - name: Create version tag
-        shell: cmd
-        run: echo ${{ github.run_id }}> VERSION
-
-      - name: Compile
-        shell: cmd
-        env:
-          HAXELIB_PATH: ${{ github.workspace }}\.haxelib\
-        run: haxelib run lime build windows --app-version="1.1.0-${{ github.run_id }}"
-
-      - name: Publish artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: windowsBuild
-          path: export/release/windows/bin
 
   buildMac:
     runs-on: macos-15
