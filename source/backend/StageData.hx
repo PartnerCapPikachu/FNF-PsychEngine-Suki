@@ -90,6 +90,14 @@ class StageData {
 		} catch (e:Dynamic) {
 			trace('StageData: failed to load stage "$stage": $e');
 		}
+
+		// Funkin Crew v1 stage fallback (mods/funkin/data/stages/<id>.json).
+		#if MODS_ALLOWED
+		if (backend.funkin.FunkinAssets.isAvailable()) {
+			final funkin:StageFile = backend.funkin.FunkinStageAdapter.loadFromFunkin(stage);
+			if (funkin != null) return funkin;
+		}
+		#end
 		return dummy();
 	}
 
