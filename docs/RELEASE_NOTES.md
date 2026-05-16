@@ -7,7 +7,7 @@ This release rolls in **147 commits** of fixes, modernization, and quality-of-li
 work on top of the archived.
 
 The goal of this fork is mostly maintenance and compability with newer libraries.
-If something breaks existing mods, then it's not a welcome change.
+If something breaks existing mods, then it's either getting compability fixes or not being added at all.
 
 New features may be added in the future.
 
@@ -25,7 +25,7 @@ Feel free to fork this fork and build upon it for your own mods or forks.
   without hunting down compatible library versions.
 - **New: ModSecurity** -- Psych will now scan mod scripts for risky behaviour
   and ask you whether to trust each mod before running it.
-- **80+ bug fixes**, including a number of long-standing crashes and freezes.
+- **80+ bug fixes**, from edge cases, rare cases and common long-standing crashes and freezes.
 - **30+ performance improvements**, especially around input handling, the
   scripting layer, and gameplay hot paths.
 
@@ -71,10 +71,9 @@ ModSecurity adds a layer of protection:
   with pinned, known-good versions and do not require any external dependency
   manager.
 - On Windows the engine installs its dependencies into a **project-local
-  `.haxelib/` folder**, so building Psych will no longer interfere with any
+  `.haxelib/` folder**, so building Psych will not interfere with any
   other Haxe project you have on your machine.
-- The setup builds `hxcpp` from source to dodge a broken release version that
-  was preventing native compilation.
+- The setup builds `hxcpp` from source to dodge the old version.
 - A small patch is applied to one of the audio-visualizer dependencies so it
   works with the current audio library.
 
@@ -85,7 +84,7 @@ ModSecurity adds a layer of protection:
 The fork closes out a backlog of crashes, freezes, and small gameplay bugs.
 A non-exhaustive tour:
 
-### Crashes & freezese.
+### Crashes & freezes.
 - Several null-pointer crashes fixed across the dialogue system, cutscenes,
   the credits screen, the mods menu, the note offset menu, the options menu,
   the music player, and various stage / character code paths.
