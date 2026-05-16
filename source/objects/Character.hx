@@ -109,6 +109,25 @@ class Character extends FlxSprite {
 		if (!Assets.exists(path))
 		#end
 		{
+			// Try Funkin Crew v1 format under mods/funkin/ before giving up.
+			#if MODS_ALLOWED
+			if (backend.funkin.FunkinAssets.isAvailable()) {
+				final funkinFile:objects.Character.CharacterFile = backend.funkin.FunkinCharacterAdapter.loadFromFunkin(character);
+				if (funkinFile != null) {
+					try {
+						loadCharacterFile(funkinFile);
+					} catch (e:Dynamic) {
+						trace('Error loading Funkin character "$character": $e');
+					}
+					skipDance = false;
+					hasMissAnimations = hasAnimation('singLEFTmiss') || hasAnimation('singDOWNmiss') || hasAnimation('singUPmiss') || hasAnimation('singRIGHTmiss');
+					recalculateDanceIdle();
+					dance();
+					return;
+				}
+			}
+			#end
+
 			path = Paths.getSharedPath('characters/' + DEFAULT_CHARACTER +
 				'.json'); // If a character couldn't be found, change him to BF just to prevent a crash
 			missingCharacter = true;

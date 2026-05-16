@@ -126,11 +126,21 @@ class FunkinAssets {
 	 * all libraries. Returns the first match or null.
 	 */
 	public static function find(relativePath:String):String {
+		return findInMod(modFolder, relativePath);
+	}
+
+	/**
+	 * Like `find` but scoped to an explicit mod folder name. Used by
+	 * `Paths.modFolders` to library-probe any mod that ships in the Funkin
+	 * layout (default mod folder, global mods, etc.).
+	 */
+	public static function findInMod(modName:String, relativePath:String):String {
 		#if MODS_ALLOWED
+		if (modName == null || modName.length == 0) return null;
 		if (relativePath == null || relativePath.length == 0) return null;
 		final libs:Array<String> = libraries;
 		final len:Int = libs.length;
-		final base:String = root();
+		final base:String = 'mods/' + modName + '/';
 		for (i in 0...len) {
 			final candidate:String = base + libs[i] + '/' + relativePath;
 			if (FileSystem.exists(candidate)) return candidate;

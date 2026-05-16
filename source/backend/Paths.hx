@@ -468,12 +468,17 @@ class Paths {
 			var fileToCheck:String = mods(Mods.currentModDirectory + '/' + key);
 			if (FileSystem.exists(fileToCheck))
 				return fileToCheck;
+			// Library-scoped probe for Funkin-layout mods (preload/, week1/, ...).
+			final libProbe:String = backend.funkin.FunkinAssets.findInMod(Mods.currentModDirectory, key);
+			if (libProbe != null) return libProbe;
 		}
 
 		for (mod in Mods.getGlobalMods()) {
 			var fileToCheck:String = mods(mod + '/' + key);
 			if (FileSystem.exists(fileToCheck))
 				return fileToCheck;
+			final libProbe:String = backend.funkin.FunkinAssets.findInMod(mod, key);
+			if (libProbe != null) return libProbe;
 		}
 		return 'mods/' + key;
 	}
