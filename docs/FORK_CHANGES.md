@@ -32,15 +32,15 @@ Project version bumped: **1.0.4 → 1.1**
 | `hxcpp-debug-server` | (not listed)       | **1.2.4**       | New explicit pin                                                                               |
 | `tink_core`          | (transitive)       | **1.26.0**      | New explicit pin (strict requirement of `grig.audio`)                                          |
 | `thx.core`           | (transitive)       | **0.44.0**      | New explicit pin                                                                               |
-| `flxanimate`         | git @ [`768740a`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/768740a)    | git (HEAD)      | Unpinned                                                                                       |
-| `grig.audio`         | git @ [`cbf91e2`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/cbf91e2)    | git (HEAD)      | Unpinned                                                                                       |
-| `funkin.vis`         | git @ [`22b1ce0`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/22b1ce0)    | git (HEAD)      | Unpinned, then source-patched (see fixes)                                                      |
+| `flxanimate`         | git @ [`768740a`](https://github.com/Dot-Stuff/flxanimate/commit/768740a)    | git (HEAD)      | Unpinned                                                                                       |
+| `grig.audio`         | git @ [`cbf91e2`](https://gitlab.com/haxe-grig/grig.audio/-/commit/cbf91e2)    | git (HEAD)      | Unpinned                                                                                       |
+| `funkin.vis`         | git @ [`22b1ce0`](https://github.com/FunkinCrew/funkVis/commit/22b1ce0)    | git (HEAD)      | Unpinned, then source-patched (see fixes)                                                      |
 
 ### Removed / replaced
 
 | Removed                                | Replaced by                                                                                                                          |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `linc_luajit` (git, pinned [`1906c4a`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/1906c4a))  | **`hxluajit` + `hxluajit-wrapper`** (git, `MAJigsaw77/hxluajit` and `MAJigsaw77/hxluajit-wrapper`) — commit [`9dffe42`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/9dffe42)                |
+| `linc_luajit` (git, pinned `1906c4a`)  | **`hxluajit` + `hxluajit-wrapper`** (git, `MAJigsaw77/hxluajit` and `MAJigsaw77/hxluajit-wrapper`) — commit [`9dffe42`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/9dffe42)                |
 
 The `<haxedef name="LINC_LUA_RELATIVE_DYNAMIC_LIB"/>` line in
 [Project.xml](../Project.xml) was deleted with the Lua swap (hxluajit links
