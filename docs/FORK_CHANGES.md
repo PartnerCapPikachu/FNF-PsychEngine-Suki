@@ -1,7 +1,7 @@
 # Fork Changes vs. Archived Psych Engine
 
 Baseline: archived-repo commit
-[`5c67ced`](https://github.com/ShadowMario/FNF-PsychEngine/commit/5c67ced49e5a98535298a6daa3f8f4ec79ac8399)
+[[`5c67ced`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/5c67ced)](https://github.com/ShadowMario/FNF-PsychEngine/commit/5c67ced49e5a98535298a6daa3f8f4ec79ac8399)
 ("Update gitVersion.txt", 2025-03-24).
 
 Summary of the diff `5c67ced..HEAD`: **147 commits, 172 files changed,
@@ -32,15 +32,15 @@ Project version bumped: **1.0.4 → 1.1**
 | `hxcpp-debug-server` | (not listed)       | **1.2.4**       | New explicit pin                                                                               |
 | `tink_core`          | (transitive)       | **1.26.0**      | New explicit pin (strict requirement of `grig.audio`)                                          |
 | `thx.core`           | (transitive)       | **0.44.0**      | New explicit pin                                                                               |
-| `flxanimate`         | git @ `768740a`    | git (HEAD)      | Unpinned                                                                                       |
-| `grig.audio`         | git @ `cbf91e2`    | git (HEAD)      | Unpinned                                                                                       |
-| `funkin.vis`         | git @ `22b1ce0`    | git (HEAD)      | Unpinned, then source-patched (see fixes)                                                      |
+| `flxanimate`         | git @ [`768740a`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/768740a)    | git (HEAD)      | Unpinned                                                                                       |
+| `grig.audio`         | git @ [`cbf91e2`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/cbf91e2)    | git (HEAD)      | Unpinned                                                                                       |
+| `funkin.vis`         | git @ [`22b1ce0`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/22b1ce0)    | git (HEAD)      | Unpinned, then source-patched (see fixes)                                                      |
 
 ### Removed / replaced
 
 | Removed                                | Replaced by                                                                                                                          |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `linc_luajit` (git, pinned `1906c4a`)  | **`hxluajit` + `hxluajit-wrapper`** (git, `MAJigsaw77/hxluajit` and `MAJigsaw77/hxluajit-wrapper`) — commit `9dffe42`                |
+| `linc_luajit` (git, pinned [`1906c4a`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/1906c4a))  | **`hxluajit` + `hxluajit-wrapper`** (git, `MAJigsaw77/hxluajit` and `MAJigsaw77/hxluajit-wrapper`) — commit [`9dffe42`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/9dffe42)                |
 
 The `<haxedef name="LINC_LUA_RELATIVE_DYNAMIC_LIB"/>` line in
 [Project.xml](../Project.xml) was deleted with the Lua swap (hxluajit links
@@ -94,8 +94,8 @@ LuaJIT statically).
 ## New feature: ModSecurity
 
 A new mod-script semi-sandboxing system was added across several commits
-(`eb8811c`, `6e8fa50`, `95f384e`, `7691e27`, `a42a83d`, `472cb16`, `8d09b9c`,
-`4ea53b6`, `13f80a4`):
+([`eb8811c`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/eb8811c), [`6e8fa50`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/6e8fa50), [`95f384e`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/95f384e), [`7691e27`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/7691e27), [`a42a83d`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/a42a83d), [`472cb16`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/472cb16), [`8d09b9c`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/8d09b9c),
+[`4ea53b6`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/4ea53b6), [`13f80a4`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/13f80a4)):
 
 - **[source/backend/ModSecurity.hx](../source/backend/ModSecurity.hx)** scans
   every Lua / HScript file in a mod when the mod is enabled.
@@ -117,22 +117,22 @@ A new mod-script semi-sandboxing system was added across several commits
 Over **80 distinct fixes** in the range — single-purpose commits. Grouped:
 
 ### Build / dependency
-- `06c8597` -- local haxelib repo via `HAXELIB_PATH`; corrected `funkin.vis`
+- [`06c8597`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/06c8597) -- local haxelib repo via `HAXELIB_PATH`; corrected `funkin.vis`
   URL (`FunkinCrew/funkin.vis` 404s → `funkVis`); `tink_core` pinned to 1.26.0.
-- `fff1352` -- `funkin.vis` `SpectralAnalyzer.hx` patched for current
+- [`fff1352`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/fff1352) -- `funkin.vis` `SpectralAnalyzer.hx` patched for current
   `grig.audio` API; `hxcpp` git-tool built in setup.
-- `4992ac7` -- setup rewritten to use direct `haxelib` calls with pinned
+- [`4992ac7`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/4992ac7) -- setup rewritten to use direct `haxelib` calls with pinned
   versions; broken `hxcpp 4.3.2` release prevented from landing.
 
 ### Crashes / null safety
-- `dcb466f` -- `PsychUIInputText.updateCaret`: clamp `caretIndex` to avoid
+- [`dcb466f`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/dcb466f) -- `PsychUIInputText.updateCaret`: clamp `caretIndex` to avoid
   `openfl 9.5.2` `RangeError` from `getLineOffset(-1)` (chart editor crash on
   clicking a different note).
-- `c2d5974` -- `LoadingState.preloadCharacter`: silently skip when JSON missing.
-- `9b8feec` -- `ErrorHandledShader`: stringify Dynamic error before saving crash log.
-- `86522b5` -- Infinite freeze when a notes-group member is null.
-- `489ed9e` -- `Note.get_hitsoundVolume` infinite recursion.
-- `c3d2ab6` -- `DialogueBoxPsych` infinite loop on null dialogue entry.
+- [`c2d5974`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/c2d5974) -- `LoadingState.preloadCharacter`: silently skip when JSON missing.
+- [`9b8feec`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/9b8feec) -- `ErrorHandledShader`: stringify Dynamic error before saving crash log.
+- [`86522b5`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/86522b5) -- Infinite freeze when a notes-group member is null.
+- [`489ed9e`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/489ed9e) -- `Note.get_hitsoundVolume` infinite recursion.
+- [`c3d2ab6`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/c3d2ab6) -- `DialogueBoxPsych` infinite loop on null dialogue entry.
 - Null-guards added to `PlayState` (char swap, alt idle), `ModsMenuState`,
   `CreditsState`, `BaseStage`, `PsychFlxAnimate.destroy`, `RGBPalette`,
   `DialogueBox` / `DialogueCharacter`, `CutsceneHandler`, `NoteOffsetState`,
@@ -141,59 +141,59 @@ Over **80 distinct fixes** in the range — single-purpose commits. Grouped:
   Lua reflection callsites.
 
 ### Off-by-one / bounds
-- `ef81461` -- `Note.defaultRGB`.
-- `aafd17c` -- `StrumNote.arrowRGB`.
-- `e55bf76` -- `Note.initializeGlobalRGBShader` RGB triple bounds.
-- `5f4b7a5` -- `arrowRGB` regression that broke right arrow.
+- [`ef81461`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/ef81461) -- `Note.defaultRGB`.
+- [`aafd17c`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/aafd17c) -- `StrumNote.arrowRGB`.
+- [`e55bf76`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/e55bf76) -- `Note.initializeGlobalRGBShader` RGB triple bounds.
+- [`5f4b7a5`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/5f4b7a5) -- `arrowRGB` regression that broke right arrow.
 
 ### Mid-iteration mutation bugs
-- `b92b6e9` -- `popUpScore` skipping sprites.
-- `3fa2d2b`, `3fbcfda`, `5b04712` -- `Paths.freeGraphicsFromMemory` /
+- [`b92b6e9`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/b92b6e9) -- `popUpScore` skipping sprites.
+- [`3fa2d2b`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/3fa2d2b), [`3fbcfda`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/3fbcfda), [`5b04712`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/5b04712) -- `Paths.freeGraphicsFromMemory` /
   `clearStoredMemory` / `clearUnusedMemory` no longer mutate `StringMap`
   mid-iteration.
-- `573ec37` -- `Achievements.reloadList` same fix.
-- `0c56ab9` -- `PlayState` ghost-note skip from concurrent `unspawnNotes` mutation.
+- [`573ec37`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/573ec37) -- `Achievements.reloadList` same fix.
+- [`0c56ab9`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/0c56ab9) -- `PlayState` ghost-note skip from concurrent `unspawnNotes` mutation.
 
 ### Lua / HScript runtime
-- `13cf9d1` -- `setSoundPitch` targets music when tag empty; drops double-apply.
-- `066f555` -- `setSoundVolume` routes empty tag to `FlxG.sound.music`.
-- `01aba4f` -- `startTween` stored / removed under canonical key.
-- `86fdd9a` -- Lua error message read from top of stack, not status code.
-- `6c93f40` -- `getBool` now accepts real `Bool` values from Lua.
-- `83e70f8`, `0267019`, `229f181` -- HScript: re-check `funk.hscript` after
+- [`13cf9d1`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/13cf9d1) -- `setSoundPitch` targets music when tag empty; drops double-apply.
+- [`066f555`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/066f555) -- `setSoundVolume` routes empty tag to `FlxG.sound.music`.
+- [`01aba4f`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/01aba4f) -- `startTween` stored / removed under canonical key.
+- [`86fdd9a`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/86fdd9a) -- Lua error message read from top of stack, not status code.
+- [`6c93f40`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/6c93f40) -- `getBool` now accepts real `Bool` values from Lua.
+- [`83e70f8`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/83e70f8), [`0267019`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/0267019), [`229f181`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/229f181) -- HScript: re-check `funk.hscript` after
   init; skip `Reflect.callMethod` on non-functions; catch generic exceptions.
-- `ff68f6d` -- `CallbackHandler` dispatcher not updating `lastCalledScript`.
-- `4aa6ff1`, `5be673b`, `fa04660` -- `LuaUtils` numeric-index parsing fixes.
-- `c2bbbe9`, `67d156a`, `eecee0e` -- `addAnimByIndices` /
+- [`ff68f6d`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/ff68f6d) -- `CallbackHandler` dispatcher not updating `lastCalledScript`.
+- [`4aa6ff1`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/4aa6ff1), [`5be673b`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/5be673b), [`fa04660`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/fa04660) -- `LuaUtils` numeric-index parsing fixes.
+- [`c2bbbe9`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/c2bbbe9), [`67d156a`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/67d156a), [`eecee0e`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/eecee0e) -- `addAnimByIndices` /
   `luaSpriteAddAnimationByIndices` / `addAnimationBySymbolIndices` drop null
   `parseInt` results.
 
 ### Editors
-- `1b72086`, `ed9107c` -- Stage / Character editor: validate animation indices.
-- `22a9084` -- `WeekEditorState`: drop non-numeric components when pasting bg color.
-- `c737f22` -- `PsychUIInputText` Ctrl+C / Ctrl+X when selection starts at 0.
-- `6b2aa63` -- `PsychUINumericStepper._updateValue` actually strips stray minuses.
+- [`1b72086`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/1b72086), [`ed9107c`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/ed9107c) -- Stage / Character editor: validate animation indices.
+- [`22a9084`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/22a9084) -- `WeekEditorState`: drop non-numeric components when pasting bg color.
+- [`c737f22`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/c737f22) -- `PsychUIInputText` Ctrl+C / Ctrl+X when selection starts at 0.
+- [`6b2aa63`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/6b2aa63) -- `PsychUINumericStepper._updateValue` actually strips stray minuses.
 
 ### Misc gameplay / UI
-- `4576d57` -- `popUpScore` pool reset velocity/acceleration on acquire.
-- `c5786a6` -- `Character` inverted `animPaused` for atlas characters.
-- `01a03f2` -- `MenuCharacter` missing-character fallback.
-- `4539adb` -- `TypedAlphabet.update` subtract delay instead of clamping.
-- `199665a` -- `OverlayShader` invalid GLSL syntax in `blendLighten`.
-- `5d3c143` -- `StageData.validateVisibility` dangling-else / unreachable branch.
-- `5556251` -- `Conductor.getStepRounded` operator precedence.
-- `1ae7843` -- `NotesColorSubState` swapped pixel / non-pixel branches.
-- `95c7bad` -- `ModSettingsSubState` `Map<->Array` fallback + `super()` before
+- [`4576d57`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/4576d57) -- `popUpScore` pool reset velocity/acceleration on acquire.
+- [`c5786a6`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/c5786a6) -- `Character` inverted `animPaused` for atlas characters.
+- [`01a03f2`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/01a03f2) -- `MenuCharacter` missing-character fallback.
+- [`4539adb`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/4539adb) -- `TypedAlphabet.update` subtract delay instead of clamping.
+- [`199665a`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/199665a) -- `OverlayShader` invalid GLSL syntax in `blendLighten`.
+- [`5d3c143`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/5d3c143) -- `StageData.validateVisibility` dangling-else / unreachable branch.
+- [`5556251`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/5556251) -- `Conductor.getStepRounded` operator precedence.
+- [`1ae7843`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/1ae7843) -- `NotesColorSubState` swapped pixel / non-pixel branches.
+- [`95c7bad`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/95c7bad) -- `ModSettingsSubState` `Map<->Array` fallback + `super()` before
   `close()`.
-- `1d547be` -- `MainMenuState` detect mouse motion on either axis.
-- `63e3bc4` -- `FreeplayState` per-song saved difficulty never being restored.
-- `74c320b` -- `HealthIcon` guard against zero `iSize` on tall/square graphics.
-- `8fae1b4` -- `NoteTypesConfig.loadFromTxt` fall-through on null/invalid file.
-- `99413c6`, `9c77b49` -- `NoteTypesConfig._propCheckArray` fixes.
-- `9841654` -- `Note.set_clipRect` bypass setter recursion + bounds-check frameIndex.
-- `b3af659` -- `MusicPlayer.updatePlaybackTxt` NPE on whole-number rates.
-- `0cd087f` -- `Achievements.getScore` no longer crashes on non-score achievements.
-- `c2898cd` -- `Difficulty.loadFromWeek` walks index 0, uses splice instead of
+- [`1d547be`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/1d547be) -- `MainMenuState` detect mouse motion on either axis.
+- [`63e3bc4`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/63e3bc4) -- `FreeplayState` per-song saved difficulty never being restored.
+- [`74c320b`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/74c320b) -- `HealthIcon` guard against zero `iSize` on tall/square graphics.
+- [`8fae1b4`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/8fae1b4) -- `NoteTypesConfig.loadFromTxt` fall-through on null/invalid file.
+- [`99413c6`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/99413c6), [`9c77b49`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/9c77b49) -- `NoteTypesConfig._propCheckArray` fixes.
+- [`9841654`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/9841654) -- `Note.set_clipRect` bypass setter recursion + bounds-check frameIndex.
+- [`b3af659`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/b3af659) -- `MusicPlayer.updatePlaybackTxt` NPE on whole-number rates.
+- [`0cd087f`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/0cd087f) -- `Achievements.getScore` no longer crashes on non-score achievements.
+- [`c2898cd`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/c2898cd) -- `Difficulty.loadFromWeek` walks index 0, uses splice instead of
   remove-by-value.
 
 ---
@@ -202,37 +202,37 @@ Over **80 distinct fixes** in the range — single-purpose commits. Grouped:
 
 Roughly **30 perf-focused commits**. Highlights:
 
-- `2ed24c2` -- `FPSCounter` ring buffer + skip redundant `TextField` writes.
-- `cb90687` -- `MusicBeatState` only writes `save.fullscreen` on change; inline
+- [`2ed24c2`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/2ed24c2) -- `FPSCounter` ring buffer + skip redundant `TextField` writes.
+- [`cb90687`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/cb90687) -- `MusicBeatState` only writes `save.fullscreen` on change; inline
   `stepHit` loop.
-- `78f27b2` -- `Controls` input checks cache binds, avoid iterator allocations.
-- `4c1d271` -- Cache `FlxKey → strum-index` map for keyboard input.
-- `254c1bd` -- Reuse `keysCheck` buffers, avoid `Array.contains` scans.
-- `40add49` -- Short-circuit BPM-map walks once past the target time/step.
-- `e295f20` -- Only push `curDecStep` / `curDecBeat` when they actually change.
-- `df01aa0` -- Skip redundant `indexOf` scans in note-spawn loop.
-- `61f7c39` -- Pool the args buffer for Lua → Haxe callback dispatch.
-- `83e3e78` -- Avoid per-call allocations in script-callback dispatchers.
-- `5cda815` -- Pool `FlxSprite` instances in `popUpScore`.
-- `3069939` -- Dedupe per-song hitsound precaches in `Note.set_noteType`.
-- `8eb55a8` -- Cache `Mods.parseList` result per-state.
-- `10a9cfa` -- Stop flushing the save on `Highscore.get*` lookups.
-- `4850432` -- `Language.formatKey` hoists regex to static.
-- `e250e39` -- `CoolUtil` hoist regex, single-lookup color map.
-- `cbc4760` -- Cache pixelUI `Paths.image` lookup in `StrumNote.reloadNote`.
-- `366ac2b`, `6288721` -- Inline `stagesFunc` at hot-path callsites.
-- `95f384e` -- ModSecurity per-session hash cache.
+- [`78f27b2`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/78f27b2) -- `Controls` input checks cache binds, avoid iterator allocations.
+- [`4c1d271`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/4c1d271) -- Cache `FlxKey → strum-index` map for keyboard input.
+- [`254c1bd`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/254c1bd) -- Reuse `keysCheck` buffers, avoid `Array.contains` scans.
+- [`40add49`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/40add49) -- Short-circuit BPM-map walks once past the target time/step.
+- [`e295f20`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/e295f20) -- Only push `curDecStep` / `curDecBeat` when they actually change.
+- [`df01aa0`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/df01aa0) -- Skip redundant `indexOf` scans in note-spawn loop.
+- [`61f7c39`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/61f7c39) -- Pool the args buffer for Lua → Haxe callback dispatch.
+- [`83e3e78`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/83e3e78) -- Avoid per-call allocations in script-callback dispatchers.
+- [`5cda815`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/5cda815) -- Pool `FlxSprite` instances in `popUpScore`.
+- [`3069939`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/3069939) -- Dedupe per-song hitsound precaches in `Note.set_noteType`.
+- [`8eb55a8`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/8eb55a8) -- Cache `Mods.parseList` result per-state.
+- [`10a9cfa`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/10a9cfa) -- Stop flushing the save on `Highscore.get*` lookups.
+- [`4850432`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/4850432) -- `Language.formatKey` hoists regex to static.
+- [`e250e39`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/e250e39) -- `CoolUtil` hoist regex, single-lookup color map.
+- [`cbc4760`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/cbc4760) -- Cache pixelUI `Paths.image` lookup in `StrumNote.reloadNote`.
+- [`366ac2b`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/366ac2b), [`6288721`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/6288721) -- Inline `stagesFunc` at hot-path callsites.
+- [`95f384e`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/95f384e) -- ModSecurity per-session hash cache.
 
 ---
 
 ## Other notable changes
 
-- `f0d23af` -- Source code formatting normalized across all classes (the bulk
+- [`f0d23af`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/f0d23af) -- Source code formatting normalized across all classes (the bulk
   of the diff line count).
-- `525c571` -- Updated `hxformat.json` to match.
-- `51844b4` -- `FlxText` respects antialiasing pref via
+- [`525c571`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/525c571) -- Updated `hxformat.json` to match.
+- [`51844b4`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/51844b4) -- `FlxText` respects antialiasing pref via
   `FlxSprite.defaultAntialiasing`.
-- `14d8b6b` -- `getSparrowAtlas` / `getPackerAtlas` / `getAsepriteAtlas`
+- [`14d8b6b`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/14d8b6b) -- `getSparrowAtlas` / `getPackerAtlas` / `getAsepriteAtlas`
   short-circuit on null image; pixel `Note` / `StrumNote.loadGraphic` guarded
   against missing skin (was producing `'null'` asset id spam); leftover debug
   `trace` dropped.
