@@ -1,7 +1,7 @@
 # Fork Changes vs. Archived Psych Engine
 
 Baseline: archived-repo commit
-[[`5c67ced`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/5c67ced)](https://github.com/ShadowMario/FNF-PsychEngine/commit/5c67ced49e5a98535298a6daa3f8f4ec79ac8399)
+[`5c67ced`](https://github.com/ShadowMario/FNF-PsychEngine/commit/5c67ced49e5a98535298a6daa3f8f4ec79ac8399)
 ("Update gitVersion.txt", 2025-03-24).
 
 Summary of the diff `5c67ced..HEAD`: **147 commits, 172 files changed,
