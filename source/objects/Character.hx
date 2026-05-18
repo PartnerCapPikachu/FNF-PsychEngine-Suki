@@ -135,7 +135,7 @@ class Character extends FlxSprite {
 	public function loadCharacterFile(json:Dynamic) {
 		isAnimateAtlas = false;
 
-		#if flxanimate
+		#if flixel_animate
 		var animToFind:String = Paths.getPath('images/' + json.image + '/Animation.json', TEXT);
 		if (#if MODS_ALLOWED FileSystem.exists(animToFind) || #end Assets.exists(animToFind))
 			isAnimateAtlas = true;
@@ -147,10 +147,9 @@ class Character extends FlxSprite {
 		if (!isAnimateAtlas) {
 			frames = Paths.getMultiAtlas(json.image.split(','));
 		}
-		#if flxanimate
+		#if flixel_animate
 		else {
 			atlas = new FlxAnimate();
-			atlas.showPivot = false;
 			try {
 				Paths.loadAnimateAtlas(atlas, json.image);
 			} catch (e:haxe.Exception) {
@@ -170,6 +169,24 @@ class Character extends FlxSprite {
 		// positioning
 		positionArray = json.position;
 		cameraPosition = json.camera_position;
+
+		#if flixel_animate
+		// Cache the Animate timeline bounds so copyAtlasValues() can compensate
+		// every frame. Old Dot-Stuff `flxanimate` did NOT subtract
+		// `timeline._bounds` before drawing -- the new `flixel-animate`
+		// (MaybeMaru) does (see drawAnimate -> matrix.translate(-bounds.x, -bounds.y)).
+		// That makes the visible art appear shifted by (-bounds * scale) in
+		// screen pixels relative to the legacy library. We compensate by adding
+		// the inverse to `atlas.offset` (which only affects rendering, NOT the
+		// camera-follow target getMidpoint() / sprite.x).
+		if (isAnimateAtlas && atlas != null) {
+			@:privateAccess if (atlas.timeline != null && atlas.timeline._bounds != null) {
+				_atlasBoundsX = atlas.timeline._bounds.x;
+				_atlasBoundsY = atlas.timeline._bounds.y;
+				_atlasNeedsBoundsComp = (_atlasBoundsX != 0 || _atlasBoundsY != 0);
+			}
+		}
+		#end
 
 		// data
 		healthIcon = json.healthicon;
@@ -200,12 +217,16 @@ class Character extends FlxSprite {
 					else
 						animation.addByPrefix(animAnim, animName, animFps, animLoop);
 				}
-				#if flxanimate
+				#if flixel_animate
 				else {
+					// flixel-animate's addBySymbol*/addBySymbolIndices use `frameRate ??= getDefaultFramerate()`,
+					// so only `null` falls back to the symbol's framerate; `0` would leave the animation frozen.
+					// Many character JSONs (e.g. darnell-blazin) ship `"fps": 0` meaning "use default".
+					var atlasFps:Null<Float> = (animFps > 0) ? cast animFps : null;
 					if (animIndices != null && animIndices.length > 0)
-						atlas.anim.addBySymbolIndices(animAnim, animName, animIndices, animFps, animLoop);
+						atlas.anim.addBySymbolIndices(animAnim, animName, animIndices, atlasFps, animLoop);
 					else
-						atlas.anim.addBySymbol(animAnim, animName, animFps, animLoop);
+						atlas.anim.addBySymbol(animAnim, animName, atlasFps, animLoop);
 				}
 				#end
 
@@ -215,7 +236,7 @@ class Character extends FlxSprite {
 					addOffset(anim.anim, 0, 0);
 			}
 		}
-		#if flxanimate
+		#if flixel_animate
 		if (isAnimateAtlas)
 			copyAtlasValues();
 		#end
@@ -228,7 +249,7 @@ class Character extends FlxSprite {
 
 		if (debugMode
 			|| (!isAnimateAtlas && animation.curAnim == null)
-			|| (isAnimateAtlas && (atlas.anim.curInstance == null || atlas.anim.curSymbol == null))) {
+			|| (isAnimateAtlas && !atlas.isAnimate)) {
 			super.update(elapsed);
 			return;
 		}
@@ -286,7 +307,7 @@ class Character extends FlxSprite {
 	}
 
 	inline public function isAnimationNull():Bool {
-		return !isAnimateAtlas ? (animation.curAnim == null) : (atlas.anim.curInstance == null || atlas.anim.curSymbol == null);
+		return !isAnimateAtlas ? (animation.curAnim == null) : !atlas.isAnimate;
 	}
 
 	var _lastPlayedAnimation:String;
@@ -307,8 +328,8 @@ class Character extends FlxSprite {
 
 		if (!isAnimateAtlas)
 			animation.curAnim.finish();
-		else
-			atlas.anim.curFrame = atlas.anim.length - 1;
+		else if (atlas.anim.curAnim != null)
+			atlas.anim.curAnim.curFrame = atlas.anim.curAnim.numFrames - 1;
 	}
 
 	public function hasAnimation(anim:String):Bool {
@@ -320,7 +341,7 @@ class Character extends FlxSprite {
 	private function get_animPaused():Bool {
 		if (isAnimationNull())
 			return false;
-		return !isAnimateAtlas ? animation.curAnim.paused : !atlas.anim.isPlaying;
+		return !isAnimateAtlas ? animation.curAnim.paused : atlas.anim.paused;
 	}
 
 	private function set_animPaused(value:Bool):Bool {
@@ -330,9 +351,9 @@ class Character extends FlxSprite {
 			animation.curAnim.paused = value;
 		else {
 			if (value)
-				atlas.pauseAnimation();
+				atlas.anim.pause();
 			else
-				atlas.resumeAnimation();
+				atlas.anim.resume();
 		}
 
 		return value;
@@ -435,8 +456,14 @@ class Character extends FlxSprite {
 	// special thanks ne_eo for the references, you're the goat!!
 	@:allow(states.editors.CharacterEditorState)
 	public var isAnimateAtlas(default, null):Bool = false;
-	#if flxanimate
+	#if flixel_animate
 	public var atlas:FlxAnimate;
+
+	// Cached `timeline._bounds` for flixel-animate -> Dot-Stuff render parity.
+	// See loadCharacterFile() for details. Applied in copyAtlasValues().
+	var _atlasBoundsX:Float = 0;
+	var _atlasBoundsY:Float = 0;
+	var _atlasNeedsBoundsComp:Bool = false;
 
 	public override function draw() {
 		var lastAlpha:Float = alpha;
@@ -447,7 +474,7 @@ class Character extends FlxSprite {
 		}
 
 		if (isAnimateAtlas) {
-			if (atlas.anim.curInstance != null) {
+			if (atlas.isAnimate) {
 				copyAtlasValues();
 				atlas.draw();
 				if (missingCharacter && visible) {
@@ -459,7 +486,7 @@ class Character extends FlxSprite {
 				}
 			}
 			// Always restore alpha/color before returning -- previously the
-			// `curInstance == null` branch skipped the restore, so each frame
+			// `!isAnimate` branch skipped the restore, so each frame
 			// re-multiplied alpha by 0.6 until the sprite faded to black.
 			alpha = lastAlpha;
 			color = lastColor;
@@ -484,7 +511,18 @@ class Character extends FlxSprite {
 			atlas.cameras = cameras;
 			atlas.scrollFactor = scrollFactor;
 			atlas.scale = scale;
-			atlas.offset = offset;
+			if (_atlasNeedsBoundsComp) {
+				// flixel-animate subtracts `timeline._bounds` from the render
+				// matrix before scaling; the legacy flxanimate did not. Add the
+				// inverse to offset so the visible art lands where the legacy
+				// library placed it. Offset is subtracted in prepareDrawMatrix
+				// (`_point.x -= offset.x`), so `+(-bounds*scale)` cancels the
+				// `-bounds*scale` baked into the matrix.
+				atlas.offset.set(offset.x - _atlasBoundsX * scale.x,
+				                 offset.y - _atlasBoundsY * scale.y);
+			} else {
+				atlas.offset = offset;
+			}
 			atlas.origin = origin;
 			atlas.x = x;
 			atlas.y = y;
@@ -502,7 +540,7 @@ class Character extends FlxSprite {
 	#end
 
 	public override function destroy() {
-		#if flxanimate
+		#if flixel_animate
 		atlas = FlxDestroyUtil.destroy(atlas);
 		#end
 		missingText = FlxDestroyUtil.destroy(missingText);

@@ -37,7 +37,8 @@ There you can learn how to use the 212 PlayState funcions in your mod!
 * iFlicky - Composer of Psync, Tea Time and some sound effects.
 * KadeDev - Fixed some issues on Chart Editor and Other PRs.
 * superpowers04 - LUA JIT Fork.
-* CheemsAndFriends - Creator of FlxAnimate.
+* CheemsAndFriends - Creator of the original FlxAnimate library.
+* MaybeMaru - Creator of flixel-animate, the Texture Atlas backend used in 1.1+.
 * Ezhalt - Pessy's Easter Egg Jingle.
 * MaliciousBunny - Video for the Final Update.
 

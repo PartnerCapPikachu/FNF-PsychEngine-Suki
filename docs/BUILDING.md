@@ -10,7 +10,7 @@
 - `git`
 - (Windows only) Microsoft Visual Studio Community 2022
 - (Linux only) VLC
-- Haxe (4.3.4 or greater)
+- Haxe 4.3.7 (recommended)
 
 ---
 
@@ -106,7 +106,7 @@ Both setup scripts install the dependencies listed below. Versions are pinned in
 | `tjson`              | haxelib                                        |
 | `thx.core`           | haxelib (transitive dep of `grig.audio`)       |
 | `hxcpp`              | git — installed **first** so no stale release of it ends up on disk |
-| `flxanimate`         | git                                            |
+| `flixel-animate`     | git                                            |
 | `funkin.vis`         | git                                            |
 | `grig.audio`         | git                                            |
 | `hxluajit`           | git                                            |

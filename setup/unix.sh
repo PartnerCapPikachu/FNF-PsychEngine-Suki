@@ -47,7 +47,7 @@ haxelib install thx.core           0.44.0 --quiet --always --skip-dependencies
 
 echo
 echo "Installing remaining git dependencies..."
-install_git flxanimate       https://github.com/Dot-Stuff/flxanimate
+install_git flixel-animate   https://github.com/MaybeMaru/flixel-animate
 install_git funkin.vis       https://github.com/FunkinCrew/funkVis
 install_git grig.audio       https://gitlab.com/haxe-grig/grig.audio
 install_git hxluajit         https://github.com/MAJigsaw77/hxluajit

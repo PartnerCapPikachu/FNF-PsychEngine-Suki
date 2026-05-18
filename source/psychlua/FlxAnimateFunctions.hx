@@ -2,7 +2,7 @@ package psychlua;
 
 import openfl.utils.Assets;
 
-#if (LUA_ALLOWED && flxanimate)
+#if (LUA_ALLOWED && flixel_animate)
 class FlxAnimateFunctions {
 	public static function implement(funk:FunkinLua) {
 		var lua:State = funk.lua;
@@ -34,8 +34,8 @@ class FlxAnimateFunctions {
 				if (obj == null)
 					return false;
 
-				obj.anim.addBySymbol(name, symbol, framerate, loop, matX, matY);
-				if (obj.anim.curSymbol == null) {
+				obj.anim.addBySymbol(name, symbol, framerate, loop);
+				if (obj.anim.curAnim == null) {
 					var obj2:ModchartAnimateSprite = cast(obj, ModchartAnimateSprite);
 					if (obj2 != null)
 						obj2.playAnim(name, true); // is ModchartAnimateSprite
@@ -63,8 +63,8 @@ class FlxAnimateFunctions {
 					indices = myIndices;
 				}
 
-				obj.anim.addBySymbolIndices(name, symbol, indices, framerate, loop, matX, matY);
-				if (obj.anim.curSymbol == null) {
+				obj.anim.addBySymbolIndices(name, symbol, indices, framerate, loop);
+				if (obj.anim.curAnim == null) {
 					var obj2:ModchartAnimateSprite = cast(obj, ModchartAnimateSprite);
 					if (obj2 != null)
 						obj2.playAnim(name, true); // is ModchartAnimateSprite

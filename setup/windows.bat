@@ -37,7 +37,7 @@ echo.
 echo Installing remaining git dependencies...
 echo.
 
-call :installGit flxanimate       https://github.com/Dot-Stuff/flxanimate
+call :installGit flixel-animate   https://github.com/MaybeMaru/flixel-animate
 call :installGit funkin.vis       https://github.com/FunkinCrew/funkVis
 call :installGit grig.audio       https://gitlab.com/haxe-grig/grig.audio
 call :installGit hxluajit         https://github.com/MAJigsaw77/hxluajit

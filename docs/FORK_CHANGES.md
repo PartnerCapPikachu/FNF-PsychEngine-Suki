@@ -28,11 +28,9 @@ Project version bumped: **1.0.4 → 1.1**
 | `tjson`              | 1.4.0              | 1.4.0           | unchanged                                                                                      |
 | `hxdiscord_rpc`      | 1.2.4              | **1.3.0**       | Minor upgrade                                                                                  |
 | `hxvlc`              | 2.0.1              | **2.2.6**       | Patch upgrades                                                                                 |
-| `hxcpp`              | (release, system)  | **git (HEAD)**  | Switched to git source — release `hxcpp 4.3.2` was broken; built from source in setup          |
-| `hxcpp-debug-server` | (not listed)       | **1.2.4**       | New explicit pin                                                                               |
+| `hxcpp`              | 4.3.2  | **git (HEAD)**  | Switched to git source as release `hxcpp 4.3.2` is very old; built from source in setup        |
 | `tink_core`          | (transitive)       | **1.26.0**      | New explicit pin (strict requirement of `grig.audio`)                                          |
-| `thx.core`           | (transitive)       | **0.44.0**      | New explicit pin                                                                               |
-| `flxanimate`         | git @ [`768740a`](https://github.com/Dot-Stuff/flxanimate/commit/768740a)    | git (HEAD)      | Unpinned                                                                                       |
+| `thx.core`           | (transitive)       | **0.44.0**      | New explicit pin                                                                     |
 | `grig.audio`         | git @ [`cbf91e2`](https://gitlab.com/haxe-grig/grig.audio/-/commit/cbf91e2)    | git (HEAD)      | Unpinned                                                                                       |
 | `funkin.vis`         | git @ [`22b1ce0`](https://github.com/FunkinCrew/funkVis/commit/22b1ce0)    | git (HEAD)      | Unpinned, then source-patched (see fixes)                                                      |
 
@@ -41,6 +39,7 @@ Project version bumped: **1.0.4 → 1.1**
 | Removed                                | Replaced by                                                                                                                          |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `linc_luajit` (git, pinned `1906c4a`)  | **`hxluajit` + `hxluajit-wrapper`** (git, `MAJigsaw77/hxluajit` and `MAJigsaw77/hxluajit-wrapper`) — commit [`9dffe42`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/9dffe42)                |
+| `flxanimate` (git, `Dot-Stuff/flxanimate`) | **`flixel-animate`** (git, [`MaybeMaru/flixel-animate`](https://github.com/MaybeMaru/flixel-animate)) — see [migration notes](MIGRATION_1.0.4_to_1.1.md#flxanimate--flixel-animate-texture-atlas) |
 
 The `<haxedef name="LINC_LUA_RELATIVE_DYNAMIC_LIB"/>` line in
 [Project.xml](../Project.xml) was deleted with the Lua swap (hxluajit links
@@ -134,7 +133,7 @@ Over **80 distinct fixes** in the range — single-purpose commits. Grouped:
 - [`489ed9e`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/489ed9e) -- `Note.get_hitsoundVolume` infinite recursion.
 - [`c3d2ab6`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/c3d2ab6) -- `DialogueBoxPsych` infinite loop on null dialogue entry.
 - Null-guards added to `PlayState` (char swap, alt idle), `ModsMenuState`,
-  `CreditsState`, `BaseStage`, `PsychFlxAnimate.destroy`, `RGBPalette`,
+  `CreditsState`, `BaseStage`, `RGBPalette`,
   `DialogueBox` / `DialogueCharacter`, `CutsceneHandler`, `NoteOffsetState`,
   `OptionsState`, `Conductor.judgeNote`, `MenuCharacter`, `Character`,
   `MusicPlayer.updatePlaybackTxt`, `OverlayShader`, `StageData`, and several
@@ -248,7 +247,7 @@ Roughly **30 perf-focused commits**. Highlights:
   (`haxelib install tink_core 1.26.0 …`) and re-test.
 - The `hxcpp` git-tool compile step is required after every fresh
   `haxelib git hxcpp` — don't remove it from setup.
-- The fork unpinned all four git deps (`flxanimate`, `funkin.vis`,
+- The fork unpinned all four git deps (`flixel-animate`, `funkin.vis`,
   `grig.audio`, `hxcpp`). If a dependency's API drift breaks the build again,
   the fastest mitigation is to re-pin to the original commits listed in the
   table above.

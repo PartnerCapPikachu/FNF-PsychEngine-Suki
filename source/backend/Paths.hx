@@ -225,15 +225,27 @@ class Paths {
 		var trackKey:String = trackedKey(key, parentFolder);
 		var bitmap:BitmapData = null;
 		if (currentTrackedAssets.exists(trackKey)) {
-			localTrackedAssets.push(trackKey);
-			return currentTrackedAssets.get(trackKey);
+			var cached:FlxGraphic = currentTrackedAssets.get(trackKey);
+			// Some consumers (notably flixel-animate's FlxAnimateSpritemapCollection)
+			// will call FlxG.bitmap.remove() on shared spritemap graphics during
+			// their destroy/useCount cleanup. The cache entry would then point at
+			// a destroyed FlxGraphic and crash on the next draw, so re-create it.
+			if (cached != null && !cached.isDestroyed) {
+				localTrackedAssets.push(trackKey);
+				return cached;
+			}
+			currentTrackedAssets.remove(trackKey);
 		}
 		// Compat fallback: a previous call with no parentFolder may have
 		// cached this image under the bare key. Honor that hit so mods that
 		// mix folder/no-folder calls don't double-load.
 		if (parentFolder != null && currentTrackedAssets.exists(key)) {
-			localTrackedAssets.push(key);
-			return currentTrackedAssets.get(key);
+			var cached:FlxGraphic = currentTrackedAssets.get(key);
+			if (cached != null && !cached.isDestroyed) {
+				localTrackedAssets.push(key);
+				return cached;
+			}
+			currentTrackedAssets.remove(key);
 		}
 		return cacheBitmap(key, parentFolder, bitmap, allowGPU);
 	}
@@ -479,64 +491,91 @@ class Paths {
 	}
 	#end
 
-	#if flxanimate
+	#if flixel_animate
+	/**
+	 * Loads a Texture Atlas (Animate) export onto the given sprite.
+	 *
+	 * Resolves all files (`Animation.json`, `metadata.json`, `spritemapN.json`,
+	 * `spritemapN.png`) through Psych's mod-aware path system, then hands the
+	 * parsed inputs to `animate.FlxAnimateFrames.fromAnimate(...)`.
+	 *
+	 * @param spr             Target `animate.FlxAnimate` sprite.
+	 * @param folderOrImg     Either a folder path under `images/` (e.g. `'characters/bf'`)
+	 *                        or a pre-resolved `FlxGraphic` of the spritemap when
+	 *                        `spriteJson` is also supplied.
+	 * @param spriteJson      Optional override path or raw JSON string for `spritemap0.json`.
+	 * @param animationJson   Optional override path or raw JSON string for `Animation.json`.
+	 */
 	public static function loadAnimateAtlas(spr:FlxAnimate, folderOrImg:Dynamic, spriteJson:Dynamic = null, animationJson:Dynamic = null) {
-		var changedAnimJson = false;
-		var changedAtlasJson = false;
-		var changedImage = false;
+		var animationContent:String = null;
+		var spritemaps:Array<animate.FlxAnimateFrames.SpritemapInput> = [];
+		var cacheKey:String = null;
 
-		if (spriteJson != null) {
-			changedAtlasJson = true;
-			spriteJson = File.getContent(spriteJson);
+		// Some Animate exports save JSON with a UTF-8 BOM (0xEF 0xBB 0xBF), which
+		// haxe.format.JsonParser rejects with "Invalid char 65279 at position 0".
+		inline function stripBom(str:String):String {
+			if (str != null && str.length > 0 && str.charCodeAt(0) == 0xFEFF)
+				return str.substr(1);
+			return str;
 		}
 
-		if (animationJson != null) {
-			changedAnimJson = true;
-			animationJson = File.getContent(animationJson);
+		// Allow callers to pass already-loaded JSON text (or a path to a file).
+		inline function resolveJson(value:Dynamic):String {
+			if (value == null) return null;
+			if (Std.isOfType(value, String)) {
+				var str:String = cast value;
+				// Treat as a filesystem path if it looks like one; otherwise assume raw JSON.
+				if (str.length < 4096 && (str.indexOf('{') < 0 || #if sys FileSystem.exists(str) #else false #end))
+					return stripBom(File.getContent(str));
+				return stripBom(str);
+			}
+			return stripBom(Std.string(value));
 		}
 
-		// is folder or image path
+		if (animationJson != null)
+			animationContent = resolveJson(animationJson);
+
 		if (Std.isOfType(folderOrImg, String)) {
-			var originalPath:String = folderOrImg;
-			for (i in 0...10) {
-				var st:String = '$i';
-				if (i == 0)
-					st = '';
+			var folder:String = cast folderOrImg;
+			cacheKey = 'images/$folder';
 
-				if (!changedAtlasJson) {
-					spriteJson = getTextFromFile('images/$originalPath/spritemap$st.json');
-					if (spriteJson != null) {
-						// trace('found Sprite Json');
-						changedImage = true;
-						changedAtlasJson = true;
-						folderOrImg = image('$originalPath/spritemap$st');
-						break;
+			if (animationContent == null)
+				animationContent = stripBom(getTextFromFile('$cacheKey/Animation.json'));
+
+			// Optional metadata.json shipped by newer exports.
+			var metadataContent:String = stripBom(getTextFromFile('$cacheKey/metadata.json'));
+
+			if (spriteJson != null) {
+				// Caller supplied a single override spritemap; pair it with the main image.
+				spritemaps.push({source: image(folder), json: resolveJson(spriteJson)});
+			} else {
+				// Collect every `spritemap<N>.json` (and the un-indexed `spritemap.json`)
+				// that exists next to the Animation.json. Different Animate exports use
+				// different starting indices (Psych mods commonly ship `spritemap1.*`),
+				// so we cannot bail out on the first miss.
+				for (i in 0...10) {
+					var st:String = (i == 0) ? '' : '$i';
+					var json:String = stripBom(getTextFromFile('$cacheKey/spritemap$st.json'));
+					if (json == null) continue;
+					var graphic = image('$folder/spritemap$st');
+					if (graphic == null) {
+						trace('Paths.loadAnimateAtlas: spritemap$st.json found but image is missing for "$cacheKey".');
+						continue;
 					}
-				} else if (fileExists('images/$originalPath/spritemap$st.png', IMAGE)) {
-					// trace('found Sprite PNG');
-					changedImage = true;
-					folderOrImg = image('$originalPath/spritemap$st');
-					break;
+					spritemaps.push({source: graphic, json: json});
+				}
+				if (spritemaps.length == 0) {
+					trace('Paths.loadAnimateAtlas: no spritemap*.json found under "$cacheKey".');
+					return;
 				}
 			}
 
-			if (!changedImage) {
-				// trace('Changing folderOrImg to FlxGraphic');
-				changedImage = true;
-				folderOrImg = image(originalPath);
-			}
-
-			if (!changedAnimJson) {
-				// trace('found Animation Json');
-				changedAnimJson = true;
-				animationJson = getTextFromFile('images/$originalPath/Animation.json');
-			}
+			spr.frames = animate.FlxAnimateFrames.fromAnimate(animationContent, spritemaps, metadataContent, cacheKey);
+		} else {
+			// folderOrImg is a FlxGraphic/BitmapData – caller is supplying inputs directly.
+			spritemaps.push({source: folderOrImg, json: resolveJson(spriteJson)});
+			spr.frames = animate.FlxAnimateFrames.fromAnimate(animationContent, spritemaps);
 		}
-
-		// trace(folderOrImg);
-		// trace(spriteJson);
-		// trace(animationJson);
-		spr.loadAtlasEx(folderOrImg, spriteJson, animationJson);
 	}
 	#end
 }

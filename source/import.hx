@@ -34,9 +34,9 @@ import objects.Alphabet;
 import objects.BGSprite;
 import states.PlayState;
 import states.LoadingState;
-#if flxanimate
-import flxanimate.*;
-import flxanimate.PsychFlxAnimate as FlxAnimate;
+#if flixel_animate
+import animate.FlxAnimate;
+import animate.FlxAnimateFrames;
 #end
 // Flixel
 import flixel.sound.FlxSound;
