@@ -48,12 +48,16 @@ typedef ModSecurityRecord = {
 @:unreflective
 class ModSecurity {
 	// Patterns that allow filesystem write/delete or arbitrary code exec.
+	// Note: runHaxeCode / runHaxeFunction / addHaxeLibrary are intentionally
+	// NOT in this list. They're just bridges into HScript -- the vast majority
+	// of mods use them for harmless logic, so flagging the bridge call itself
+	// would prompt for trust on nearly every modern mod. Instead, when a Lua
+	// file contains a Haxe-bridge call, we scan its full content against the
+	// HX patterns below (see `scanDir`), so embedded Sys.command / sys.io.File /
+	// cpp.Lib.load etc. still get caught by their real, dangerous pattern.
 	static final LUA_PATTERNS_HIGH:Array<{p:EReg, name:String}> = [
 		{p: ~/\bsaveFile\b/,         name: "saveFile"},
 		{p: ~/\bdeleteFile\b/,       name: "deleteFile"},
-		{p: ~/\brunHaxeCode\b/,      name: "runHaxeCode"},
-		{p: ~/\brunHaxeFunction\b/,  name: "runHaxeFunction"},
-		{p: ~/\baddHaxeLibrary\b/,   name: "addHaxeLibrary"},
 		{p: ~/\bos\.execute\b/,      name: "os.execute"},
 		{p: ~/\bos\.remove\b/,       name: "os.remove"},
 		{p: ~/\bos\.rename\b/,       name: "os.rename"},
@@ -72,6 +76,13 @@ class ModSecurity {
 		{p: ~/\bos\.tmpname\b/,      name: "os.tmpname"},
 		{p: ~/\bos\.setlocale\b/,    name: "os.setlocale"},
 	];
+
+	// Bridge calls from Lua into Haxe. Presence of any of these in a .lua file
+	// means embedded Haxe code may exist (either inline as a string, or running
+	// later under an HScript context the Lua file set up), so we additionally
+	// scan that file's content against HX_PATTERNS_HIGH/MED to catch the real
+	// dangerous calls (Sys.command, sys.io.File, cpp.Lib.load, etc.).
+	static final LUA_HAXE_BRIDGE:EReg = ~/\b(runHaxeCode|runHaxeFunction|addHaxeLibrary)\b/;
 
 	static final HX_PATTERNS_HIGH:Array<{p:EReg, name:String}> = [
 		{p: ~/\bSys\.command\b/,        name: "Sys.command"},
@@ -123,6 +134,53 @@ class ModSecurity {
 	// and FunkinLua.new both call isBlocked, often dozens of times per state).
 	static var checkedThisSession:Map<String, Bool> = new Map();
 
+	/**
+	 * Returns every pattern name the scanner knows about, in display order
+	 * (HIGH first, MED second; Lua then Haxe within each tier; deduplicated).
+	 * Used by the options UI to enumerate per-check toggles.
+	 */
+	public static function getAllCheckNames():Array<String> {
+		final seen = new Map<String, Bool>();
+		final out:Array<String> = [];
+		inline function push(arr:Array<{p:EReg, name:String}>) {
+			for (i in 0...arr.length) {
+				final n = arr[i].name;
+				if (seen.exists(n)) continue;
+				seen.set(n, true);
+				out.push(n);
+			}
+		}
+		push(LUA_PATTERNS_HIGH);
+		push(HX_PATTERNS_HIGH);
+		push(LUA_PATTERNS_MED);
+		push(HX_PATTERNS_MED);
+		return out;
+	}
+
+	/**
+	 * True if the named pattern is currently enabled for scanning. Missing
+	 * entries in `ClientPrefs.data.modSecurityChecks` default to enabled, so
+	 * any newly-added check is on out of the box. The "ModSecurity (tamper)"
+	 * pattern is force-enabled regardless -- disabling it would let a mod
+	 * defeat the security system by simply referencing the class.
+	 */
+	public static inline function isCheckEnabled(name:String):Bool {
+		if (name == "ModSecurity (tamper)") return true;
+		final map = ClientPrefs.data.modSecurityChecks;
+		if (map == null) return true;
+		return !map.exists(name) || map.get(name) == true;
+	}
+
+	public static function setCheckEnabled(name:String, v:Bool):Void {
+		if (name == "ModSecurity (tamper)") return; // cannot be disabled
+		var map = ClientPrefs.data.modSecurityChecks;
+		if (map == null) {
+			map = new Map();
+			ClientPrefs.data.modSecurityChecks = map;
+		}
+		map.set(name, v);
+	}
+
 	public static function load():Void {
 		if (loaded) return;
 		loaded = true;
@@ -165,6 +223,42 @@ class ModSecurity {
 		load();
 		records.remove(folder);
 		checkedThisSession.remove(folder);
+		save();
+	}
+
+	/**
+	 * Re-scan every enabled mod while preserving existing user decisions where
+	 * still applicable. Called by the per-check options menu after toggles
+	 * change so disabling a check immediately drops the corresponding findings
+	 * (and auto-trusts any mod that no longer has any).
+	 */
+	public static function rescanAll():Void {
+		load();
+		checkedThisSession = new Map();
+		final enabled = Mods.parseList().enabled;
+		for (i in 0...enabled.length) {
+			final folder = enabled[i];
+			final findings = scanMod(folder);
+			final hash = computeHash(folder);
+			final stamp = computeStamp(folder);
+			var rec = records.get(folder);
+			if (rec == null) {
+				rec = {hash: hash, allowed: (findings.length == 0), findings: findings, stamp: stamp, decided: false};
+				records.set(folder, rec);
+			} else {
+				rec.findings = findings;
+				rec.hash = hash;
+				rec.stamp = stamp;
+				// If nothing risky remains, auto-trust regardless of prior decision.
+				if (findings.length == 0) {
+					rec.allowed = true;
+					rec.decided = false;
+				}
+				// Otherwise keep the user's prior allowed/decided as-is. If they
+				// hadn't decided yet, the next pending-mods check will still pick
+				// this mod up.
+			}
+		}
 		save();
 	}
 
@@ -308,6 +402,16 @@ class ModSecurity {
 			final highCount:Int = highs.length;
 			final medCount:Int = meds.length;
 
+			// If this is a Lua file that bridges into Haxe, also scan it against
+			// the Haxe patterns so embedded Sys/sys/cpp calls inside runHaxeCode
+			// strings (or any Haxe set up via addHaxeLibrary) get flagged with
+			// their real, concrete pattern instead of a generic "runHaxeCode".
+			final alsoScanHx:Bool = isLua && LUA_HAXE_BRIDGE.match(content);
+			final extraHighs = alsoScanHx ? HX_PATTERNS_HIGH : null;
+			final extraMeds  = alsoScanHx ? HX_PATTERNS_MED  : null;
+			final extraHighCount:Int = alsoScanHx ? HX_PATTERNS_HIGH.length : 0;
+			final extraMedCount:Int  = alsoScanHx ? HX_PATTERNS_MED.length  : 0;
+
 			for (li in 0...lineCount) {
 				final line = lines[li];
 				// Skip comment-only lines cheaply -- avoids flagging docs.
@@ -319,13 +423,29 @@ class ModSecurity {
 				}
 				for (pi in 0...highCount) {
 					final pat = highs[pi];
+					if (!isCheckEnabled(pat.name)) continue;
 					if (pat.p.match(line))
 						findings.push({file: rel, line: li + 1, pattern: pat.name, severity: 0, snippet: trimSnippet(line)});
 				}
 				for (pi in 0...medCount) {
 					final pat = meds[pi];
+					if (!isCheckEnabled(pat.name)) continue;
 					if (pat.p.match(line))
 						findings.push({file: rel, line: li + 1, pattern: pat.name, severity: 1, snippet: trimSnippet(line)});
+				}
+				if (alsoScanHx) {
+					for (pi in 0...extraHighCount) {
+						final pat = extraHighs[pi];
+						if (!isCheckEnabled(pat.name)) continue;
+						if (pat.p.match(line))
+							findings.push({file: rel, line: li + 1, pattern: pat.name, severity: 0, snippet: trimSnippet(line)});
+					}
+					for (pi in 0...extraMedCount) {
+						final pat = extraMeds[pi];
+						if (!isCheckEnabled(pat.name)) continue;
+						if (pat.p.match(line))
+							findings.push({file: rel, line: li + 1, pattern: pat.name, severity: 1, snippet: trimSnippet(line)});
+					}
 				}
 			}
 		}

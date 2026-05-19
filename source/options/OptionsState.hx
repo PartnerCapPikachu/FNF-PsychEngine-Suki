@@ -10,7 +10,8 @@ class OptionsState extends MusicBeatState {
 		'Adjust Delay and Combo',
 		'Graphics',
 		'Visuals',
-		'Gameplay'
+		'Gameplay',
+		'Misc'
 		#if TRANSLATIONS_ALLOWED, 'Language' #end
 	];
 	private var grpOptions:FlxTypedGroup<Alphabet>;
@@ -31,6 +32,8 @@ class OptionsState extends MusicBeatState {
 				openSubState(new options.VisualsSettingsSubState());
 			case 'Gameplay':
 				openSubState(new options.GameplaySettingsSubState());
+			case 'Misc':
+				openSubState(new options.MiscSettingsSubState());
 			case 'Adjust Delay and Combo':
 				MusicBeatState.switchState(new options.NoteOffsetState());
 			case 'Language':
@@ -57,16 +60,21 @@ class OptionsState extends MusicBeatState {
 		grpOptions = new FlxTypedGroup<Alphabet>();
 		add(grpOptions);
 
+		var scale:Float = 0.8;
+		var spacing:Float = 92 * scale;
 		for (num => option in options) {
 			var optionText:Alphabet = new Alphabet(0, 0, Language.getPhrase('options_$option', option), true);
+			optionText.setScale(scale);
 			optionText.screenCenter();
-			optionText.y += (92 * (num - (options.length / 2))) + 45;
+			optionText.y += (spacing * (num - (options.length / 2))) + 45;
 			grpOptions.add(optionText);
 		}
 
 		selectorLeft = new Alphabet(0, 0, '>', true);
+		selectorLeft.setScale(scale);
 		add(selectorLeft);
 		selectorRight = new Alphabet(0, 0, '<', true);
+		selectorRight.setScale(scale);
 		add(selectorRight);
 
 		changeSelection();
@@ -112,9 +120,9 @@ class OptionsState extends MusicBeatState {
 			item.alpha = 0.6;
 			if (item.targetY == 0) {
 				item.alpha = 1;
-				selectorLeft.x = item.x - 63;
+				selectorLeft.x = item.x - 63 * 0.8;
 				selectorLeft.y = item.y;
-				selectorRight.x = item.x + item.width + 15;
+				selectorRight.x = item.x + item.width + 15 * 0.8;
 				selectorRight.y = item.y;
 			}
 		}

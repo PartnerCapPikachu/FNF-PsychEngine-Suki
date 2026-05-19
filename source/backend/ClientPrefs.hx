@@ -79,6 +79,12 @@ import states.TitleState;
 	public var loadingScreen:Bool = true;
 	public var language:String = 'en-US';
 	public var modSecurityEnabled:Bool = true;
+	// Per-pattern toggles for mod-security scanning. Key = ModSecurity pattern
+	// name (e.g. "saveFile", "Sys.command"). Missing entries default to enabled
+	// so newly-added checks are on by default without needing a migration.
+	// Edited via options.ModSecurityChecksSubState.
+	public var modSecurityChecks:Map<String, Bool> = new Map();
+	public var scriptDeprecationWarnings:Bool = true;
 }
 
 class ClientPrefs {
