@@ -39,10 +39,24 @@ class Mods {
 		globalMods = [];
 		for (mod in parseList().enabled) {
 			var pack:Dynamic = getPack(mod);
-			if (pack != null && pack.runsGlobally)
+			if (pack == null) continue;
+			// Script packs always run globally; other mods opt in via `runsGlobally`.
+			var isScriptPackType:Bool = pack.type != null && Std.string(pack.type).toLowerCase() == 'scriptpack';
+			if (isScriptPackType || pack.runsGlobally == true)
 				globalMods.push(mod);
 		}
 		return globalMods;
+	}
+
+	/**
+	 * Whether the given mod (or the current mod, if `folder` is null) is declared as a
+	 * "script pack" via `pack.json`'s `"type": "scriptpack"` field. Script packs always
+	 * run globally; other classifications (e.g. `"modpack"`) opt in via `runsGlobally`.
+	 */
+	public static function isScriptPack(?folder:String = null):Bool {
+		var pack:Dynamic = getPack(folder);
+		if (pack == null) return false;
+		return pack.type != null && Std.string(pack.type).toLowerCase() == 'scriptpack';
 	}
 
 	inline public static function getModDirectories():Array<String> {

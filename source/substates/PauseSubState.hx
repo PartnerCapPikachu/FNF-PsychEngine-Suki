@@ -7,6 +7,11 @@ import flixel.util.FlxStringUtil;
 import states.StoryMenuState;
 import states.FreeplayState;
 import options.OptionsState;
+import options.ModSettingsSubState;
+#if MODS_ALLOWED
+import sys.io.File;
+import sys.FileSystem;
+#end
 
 class PauseSubState extends MusicBeatSubstate {
 	var grpMenuShit:FlxTypedGroup<Alphabet>;
@@ -14,7 +19,12 @@ class PauseSubState extends MusicBeatSubstate {
 	var menuItems:Array<String> = [];
 	var menuItemsOG:Array<String> = ['Resume', 'Restart Song', 'Change Difficulty', 'Options', 'Exit to menu'];
 	var difficultyChoices = [];
+	var modOptionsChoices:Array<String> = [];
 	var curSelected:Int = 0;
+
+	// One entry per mod (current mod + any enabled global/script-pack mods) that has data/settings.json.
+	// `label` is what's displayed in the submenu and is deduped against other entries.
+	var modSettingsList:Array<{settings:Array<Dynamic>, folder:String, name:String, label:String}> = [];
 
 	var pauseMusic:FlxSound;
 	var practiceText:FlxText;
@@ -42,6 +52,18 @@ class PauseSubState extends MusicBeatSubstate {
 			menuItemsOG.insert(5 + num, 'Toggle Botplay');
 		} else if (PlayState.instance.practiceMode && !PlayState.instance.startingSong)
 			menuItemsOG.insert(3, 'Skip Time');
+
+		tryLoadModSettings();
+		if (modSettingsList.length > 0) {
+			var idx:Int = menuItemsOG.indexOf('Options');
+			if (idx < 0) idx = menuItemsOG.length - 1;
+			menuItemsOG.insert(idx + 1, 'Mod Options');
+
+			for (entry in modSettingsList)
+				modOptionsChoices.push(entry.label);
+			modOptionsChoices.push('BACK');
+		}
+
 		menuItems = menuItemsOG;
 
 		for (i in 0...Difficulty.list.length) {
@@ -136,6 +158,69 @@ class PauseSubState extends MusicBeatSubstate {
 		cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]];
 
 		super.create();
+	}
+
+	function tryLoadModSettings() {
+		#if MODS_ALLOWED
+		var seen:Map<String, Bool> = new Map();
+
+		// Current mod first so it sorts to the top of the menu.
+		var current:String = Mods.currentModDirectory;
+		if (current != null && current.trim().length > 0)
+			tryAppendModSettings(current, seen);
+
+		// Then any enabled global mod (pack.json `runsGlobally: true` -- asset replacers, script packs, etc).
+		for (mod in Mods.getGlobalMods())
+			tryAppendModSettings(mod, seen);
+		#end
+	}
+
+	#if MODS_ALLOWED
+	function tryAppendModSettings(folder:String, seen:Map<String, Bool>) {
+		if (folder == null || folder.trim().length == 0 || seen.exists(folder))
+			return;
+		seen.set(folder, true);
+
+		var path:String = Paths.mods('$folder/data/settings.json');
+		if (!FileSystem.exists(path))
+			return;
+
+		try {
+			var parsed:Array<Dynamic> = tjson.TJSON.parse(File.getContent(path));
+			if (parsed == null || parsed.length < 1)
+				return;
+			var pack:Dynamic = Mods.getPack(folder);
+			var name:String = (pack != null && pack.name != null) ? pack.name : folder;
+
+			// Dedupe display labels: if another entry already uses this name,
+			// disambiguate both with their folder names.
+			var label:String = name;
+			for (existing in modSettingsList) {
+				if (existing.label == label) {
+					existing.label = '${existing.name} (${existing.folder})';
+					label = '$name ($folder)';
+					break;
+				}
+			}
+
+			modSettingsList.push({settings: parsed, folder: folder, name: name, label: label});
+		} catch (e:Dynamic) {
+			trace('Failed to load mod settings for $folder: $e');
+		}
+	}
+	#end
+
+	// Opens a ModSettingsSubState as a nested substate while hiding the pause UI behind it.
+	// Without this, the pause menu (items, dim bg, info text) keeps drawing on top of the
+	// child substate, which makes it look like the settings opened "behind" the pause menu.
+	function openModSettings(entry:{settings:Array<Dynamic>, folder:String, name:String, label:String}) {
+		var sub = new options.ModSettingsSubState(entry.settings, entry.folder, entry.name);
+		// PauseSubState uses its own dedicated camera (see create()), which is drawn last
+		// in FlxG.cameras.list. If ModSettings used the default camera, the pause menu
+		// would render on top of it. Reuse this substate's camera so draw order matches
+		// the OptionsState -> BaseOptionsMenu pattern (parent's bg covered by child's bg).
+		sub.cameras = cameras;
+		openSubState(sub);
 	}
 
 	function getPauseSong() {
@@ -242,6 +327,21 @@ class PauseSubState extends MusicBeatSubstate {
 				regenMenu();
 			}
 
+			if (menuItems == modOptionsChoices) {
+				if (daSelected == 'BACK') {
+					menuItems = menuItemsOG;
+					regenMenu();
+					return;
+				}
+				for (entry in modSettingsList) {
+					if (entry.label == daSelected) {
+						openModSettings(entry);
+						return;
+					}
+				}
+				return;
+			}
+
 			switch (daSelected) {
 				case "Resume":
 					close();
@@ -249,6 +349,14 @@ class PauseSubState extends MusicBeatSubstate {
 					menuItems = difficultyChoices;
 					deleteSkipTimeText();
 					regenMenu();
+				case 'Mod Options':
+					if (modSettingsList.length == 1) {
+						openModSettings(modSettingsList[0]);
+					} else if (modSettingsList.length > 1) {
+						menuItems = modOptionsChoices;
+						deleteSkipTimeText();
+						regenMenu();
+					}
 				case 'Toggle Practice Mode':
 					PlayState.instance.practiceMode = !PlayState.instance.practiceMode;
 					PlayState.changedDifficulty = true;
@@ -369,6 +477,13 @@ class PauseSubState extends MusicBeatSubstate {
 			item.isMenuItem = true;
 			item.targetY = num;
 			grpMenuShit.add(item);
+
+			// Long labels (mod/pack names) would overflow the screen at full scale -- shrink to fit.
+			var maxWidth:Float = FlxG.width - 180;
+			if (item.width > maxWidth) {
+				var s:Float = maxWidth / item.width;
+				item.setScale(item.scale.x * s, item.scale.y * s);
+			}
 
 			if (str == 'Skip Time') {
 				skipTimeText = new FlxText(0, 0, 0, '', 64);
