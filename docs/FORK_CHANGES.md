@@ -5,9 +5,9 @@ Baseline: archived-repo commit
 ("Update gitVersion.txt", 2025-03-24).
 
 Summary of the diff `5c67ced..HEAD`: **147 commits, 172 files changed,
-~17,400 insertions / ~16,900 deletions**.
+~17,400 insertions / ~16,900 deletions**. That's only for the updated libraries, formatting, bugfixes, more to come later!
 
-Project version bumped: **1.0.4 → 1.1**
+Project version bumped: **1.0.4 → 1.1.1**
 ([source/states/MainMenuState.hx](../source/states/MainMenuState.hx#L16))
 
 ---
@@ -89,12 +89,17 @@ LuaJIT statically).
 - `linc_luajit` haxelib entry replaced with `hxluajit` + `hxluajit-wrapper`.
 
 ---
+## New feature: Modpack types
+Extended pack.json metadata a bit for convenience.
+- Two types of packs, defined in pack.json. "Mod pack" or "Script Pack"
+  - Script packs run globally and are always accessable through pause menus "Mod Settings".
+  - Mod packs run locally with the option to opt in using "runsGlobally" as usual. If a mod pack has settings, it will also show up in pause menus "Mod Settings".
 
 ## New feature: ModSecurity
 
 A new mod-script semi-sandboxing system was added across several commits
 ([`eb8811c`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/eb8811c), [`6e8fa50`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/6e8fa50), [`95f384e`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/95f384e), [`7691e27`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/7691e27), [`a42a83d`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/a42a83d), [`472cb16`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/472cb16), [`8d09b9c`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/8d09b9c),
-[`4ea53b6`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/4ea53b6), [`13f80a4`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/13f80a4)):
+[`4ea53b6`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/4ea53b6), [`13f80a4`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/13f80a4), [`abc2a27`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/abc2a27)):
 
 - **[source/backend/ModSecurity.hx](../source/backend/ModSecurity.hx)** scans
   every Lua / HScript file in a mod when the mod is enabled.
@@ -108,7 +113,7 @@ A new mod-script semi-sandboxing system was added across several commits
 - New per-mod **SEC button** in the Mods menu to review / change trust.
 - Compile-time macro `macros.PatchIris.patch()` injects
   `ModSecurity.safeResolveClass` into hscript-iris's class-resolution path. This is to prevent scripts from being able to tamper with `ModSecurity`.
-
+- Configure what should get flagged through Misc options menu.
 ---
 
 ## Bug fixes
@@ -171,6 +176,7 @@ Over **80 distinct fixes** in the range — single-purpose commits. Grouped:
 - [`1b72086`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/1b72086), [`ed9107c`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/ed9107c) -- Stage / Character editor: validate animation indices.
 - [`22a9084`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/22a9084) -- `WeekEditorState`: drop non-numeric components when pasting bg color.
 - [`c737f22`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/c737f22) -- `PsychUIInputText` Ctrl+C / Ctrl+X when selection starts at 0.
+- [`af9f95d`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/af9f95d) -- `PsychUIInputText` fixed uppercase handling and backspace (I think..?)
 - [`6b2aa63`](https://github.com/MeguminBOT/FNF-PsychEngine/commit/6b2aa63) -- `PsychUINumericStepper._updateValue` actually strips stray minuses.
 
 ### Misc gameplay / UI

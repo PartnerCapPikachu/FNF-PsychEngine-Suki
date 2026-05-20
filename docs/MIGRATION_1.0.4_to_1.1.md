@@ -10,7 +10,7 @@ do not.
 ---
 
 ## Table of Contents
-
+- [Modpack metadata](#modpack-metadata)
 - [Camera filters API (Shaders)](#camera-filters-api-shaders)
   - [What changed](#what-changed)
   - [Before (1.0.4, HScript)](#before-104-hscript)
@@ -26,6 +26,15 @@ do not.
 - [Need help?](#need-help)
 
 ---
+
+## Modpack metadata
+Extended pack.json metadata a bit for convenience.
+- Two types of packs, defined in pack.json. "Mod pack" or "Script Pack"
+  - Script packs run globally and are always accessable through pause menus "Mod Settings".
+  - Mod packs run locally with the option to opt in using "runsGlobally" as usual. If a mod pack has settings, it will also show up in pause menus "Mod Settings".
+
+If no type is specified, it defaults to "modpack". So if your modpack is a collection of scripts, you should set type to "scriptpack" or runsGlobally to "true". I recommend setting type over runsGlobally as there may be changes to how runsGlobally is handled.
+
 
 ## Camera filters API (Shaders)
 
