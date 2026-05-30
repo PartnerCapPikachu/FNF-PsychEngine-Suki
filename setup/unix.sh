@@ -1,14 +1,13 @@
 #!/bin/sh
 # SETUP FOR MAC AND LINUX SYSTEMS!!!
-# REMINDER THAT YOU NEED HAXE INSTALLED PRIOR TO USING THIS
+# REMINDER THAT YOU NEED HAXE INSTALLED PRIOR TO USING THIS (MAC ONLY)
 # https://haxe.org/download
 cd ..
 
 set -e
 
-echo "Setting up global haxelib repository at ~/haxelib ..."
-mkdir -p ~/haxelib
-haxelib setup ~/haxelib
+echo "Setting up local haxelib repository ..."
+haxelib newrepo
 
 # Wipe any leftover folder so haxelib never hits sys_remove_dir on read-only .git files.
 install_git () {
