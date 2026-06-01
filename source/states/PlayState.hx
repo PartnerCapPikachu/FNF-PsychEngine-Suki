@@ -430,13 +430,14 @@ class PlayState extends MusicBeatState {
 			gfGroup.add(gf);
 		}
 
-		dad = new Character(0, 0, SONG.player2);
-		startCharacterPos(dad, true);
-		dadGroup.add(dad);
+		if (!stageData.hide_girlfriend)
+		{
+			if (SONG.gfVersion == null || SONG.gfVersion.trim().length == 0) SONG.gfVersion = 'gf';
+			gf = addCharacterToList(SONG.gfVersion, 2, false);
+		}
 
-		boyfriend = new Character(0, 0, SONG.player1, true);
-		startCharacterPos(boyfriend);
-		boyfriendGroup.add(boyfriend);
+		dad = addCharacterToList(SONG.player2, 1, false);
+		boyfriend = addCharacterToList(SONG.player1, 0, false);
 
 		if (stageData.objects != null && stageData.objects.length > 0) {
 			var list:Map<String, FlxSprite> = StageData.addObjectsToState(stageData.objects, !stageData.hide_girlfriend ? gfGroup : null, dadGroup,
@@ -733,39 +734,33 @@ class PlayState extends MusicBeatState {
 			FlxColor.fromRGB(boyfriend.healthColorArray[0], boyfriend.healthColorArray[1], boyfriend.healthColorArray[2]));
 	}
 
-	public function addCharacterToList(newCharacter:String, type:Int) {
-		switch (type) {
-			case 0:
-				if (!boyfriendMap.exists(newCharacter)) {
-					var newBoyfriend:Character = new Character(0, 0, newCharacter, true);
-					boyfriendMap.set(newCharacter, newBoyfriend);
-					boyfriendGroup.add(newBoyfriend);
-					startCharacterPos(newBoyfriend);
-					newBoyfriend.alpha = 0.00001;
-					startCharacterScripts(newBoyfriend.curCharacter);
-				}
-
+	public function addCharacterToList(json:String, type:Int = 0, cache:Bool = true):Character
+	{
+		var characterMap:Map<String, Character> = boyfriendMap;
+		var characterGroup:FlxSpriteGroup = boyfriendGroup;
+		switch (type)
+		{
 			case 1:
-				if (!dadMap.exists(newCharacter)) {
-					var newDad:Character = new Character(0, 0, newCharacter);
-					dadMap.set(newCharacter, newDad);
-					dadGroup.add(newDad);
-					startCharacterPos(newDad, true);
-					newDad.alpha = 0.00001;
-					startCharacterScripts(newDad.curCharacter);
-				}
-
+				characterMap = dadMap;
+				characterGroup = dadGroup;
 			case 2:
-				if (gf != null && !gfMap.exists(newCharacter)) {
-					var newGf:Character = new Character(0, 0, newCharacter);
-					newGf.scrollFactor.set(0.95, 0.95);
-					gfMap.set(newCharacter, newGf);
-					gfGroup.add(newGf);
-					startCharacterPos(newGf);
-					newGf.alpha = 0.00001;
-					startCharacterScripts(newGf.curCharacter);
-				}
+				characterMap = gfMap;
+				characterGroup = gfGroup;
 		}
+
+		if (characterMap.exists(json)) return characterMap[json];
+		else if (cache && type == 2 && gf == null) return null;
+
+		var character:Character = new Character(0, 0, json, type == 0);
+		characterMap.set(json, character);
+		characterGroup.add(character);
+		startCharacterPos(character);
+		if (cache)
+		{
+			character.alpha = .0001;
+			startCharacterScripts(character.curCharacter);
+		}
+		return character;
 	}
 
 	function startCharacterScripts(name:String) {
@@ -2190,70 +2185,73 @@ class PlayState extends MusicBeatState {
 				}
 
 			case 'Change Character':
-				var charType:Int = 0;
-				switch (value1.toLowerCase().trim()) {
-					case 'gf' | 'girlfriend':
-						charType = 2;
-					case 'dad' | 'opponent':
-						charType = 1;
+				var type:Int = switch (value1.toLowerCase().trim())
+				{
+					case 'gf' | 'girlfriend': 2;
+					case 'dad' | 'opponent': 1;
 					default:
-						var parsed:Null<Int> = Std.parseInt(value1);
-						charType = (parsed != null) ? parsed : 0;
+						var val1:Int = Std.parseInt(value1) ?? 0;
+						val1 != null ? 0 : val1;
 				}
 
-				switch (charType) {
-					case 0:
-						if (boyfriend.curCharacter != value2) {
-							if (!boyfriendMap.exists(value2)) {
-								addCharacterToList(value2, charType);
-							}
-
-							var lastAlpha:Float = boyfriend.alpha;
-							boyfriend.alpha = 0.00001;
-							boyfriend = boyfriendMap.get(value2);
-							boyfriend.alpha = lastAlpha;
-							iconP1.changeIcon(boyfriend.healthIcon);
-						}
-						setOnScripts('boyfriendName', boyfriend.curCharacter);
-
+				var characterName:String = 'boyfriend';
+				var character:Character = boyfriend;
+				var characterMap:Map<String, Character> = boyfriendMap;
+				var icon:HealthIcon = iconP1;
+				switch (type)
+				{
 					case 1:
-						if (dad.curCharacter != value2) {
-							if (!dadMap.exists(value2)) {
-								addCharacterToList(value2, charType);
-							}
-
-							var wasGf:Bool = dad.curCharacter.startsWith('gf-') || dad.curCharacter == 'gf';
-							var lastAlpha:Float = dad.alpha;
-							dad.alpha = 0.00001;
-							dad = dadMap.get(value2);
-							if (!dad.curCharacter.startsWith('gf-') && dad.curCharacter != 'gf') {
-								if (wasGf && gf != null) {
-									gf.visible = true;
-								}
-							} else if (gf != null) {
-								gf.visible = false;
-							}
-							dad.alpha = lastAlpha;
-							iconP2.changeIcon(dad.healthIcon);
-						}
-						setOnScripts('dadName', dad.curCharacter);
-
+						characterName = 'dad';
+						character = dad;
+						characterMap = dadMap;
+						icon = iconP2;
 					case 2:
-						if (gf != null) {
-							if (gf.curCharacter != value2) {
-								if (!gfMap.exists(value2)) {
-									addCharacterToList(value2, charType);
-								}
-
-								var lastAlpha:Float = gf.alpha;
-								gf.alpha = 0.00001;
-								gf = gfMap.get(value2);
-								gf.alpha = lastAlpha;
-							}
-							setOnScripts('gfName', gf.curCharacter);
-						}
+						characterName = 'gf';
+						character = gf;
+						characterMap = gfMap;
+						icon = null;
 				}
-				reloadHealthBarColors();
+
+				if (character != null)
+				{
+					if (character.curCharacter != value2)
+					{
+						if (!characterMap.exists(value2))
+							addCharacterToList(value2, type);
+
+						var newCharacter:Character = characterMap[value2];
+						newCharacter.alpha = 1;
+
+						var lastAlpha:Float = character.alpha;
+						character.alpha = .0001;
+
+						var wasGf:Bool = character.curCharacter.startsWith('gf-') || character.curCharacter == 'gf';
+
+						switch (type)
+						{
+							case 0:
+								boyfriend = newCharacter;
+
+							case 1:
+								dad = newCharacter;
+								if (!newCharacter.curCharacter.startsWith('gf-') && newCharacter.curCharacter != 'gf')
+								{
+									if (wasGf && gf != null)
+										gf.visible = false;
+								}
+								else if (gf != null)
+									gf.visible = false;
+
+							case 2:
+								gf = newCharacter; // character != null which would already be this.gf
+						}
+
+						icon?.changeIcon(newCharacter.healthIcon);
+						reloadHealthBarColors();
+
+						setOnScripts('${characterName}Name', newCharacter.curCharacter);
+					}
+				}
 
 			case 'Change Scroll Speed':
 				if (songSpeedType != "constant") {
