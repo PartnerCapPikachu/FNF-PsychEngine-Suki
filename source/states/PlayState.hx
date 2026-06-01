@@ -421,15 +421,6 @@ class PlayState extends MusicBeatState {
 		add(luaDebugGroup);
 		#end
 
-		if (!stageData.hide_girlfriend) {
-			if (SONG.gfVersion == null || SONG.gfVersion.length < 1)
-				SONG.gfVersion = 'gf'; // Fix for the Chart Editor
-			gf = new Character(0, 0, SONG.gfVersion);
-			startCharacterPos(gf);
-			gfGroup.scrollFactor.set(0.95, 0.95);
-			gfGroup.add(gf);
-		}
-
 		if (!stageData.hide_girlfriend)
 		{
 			if (SONG.gfVersion == null || SONG.gfVersion.trim().length == 0) SONG.gfVersion = 'gf';
